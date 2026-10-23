@@ -1,0 +1,15 @@
+name: Feature request
+description: A kind of video, a scene, an action or an option you'd like
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you're trying to make
+      description: The video or guide you wanted, and where showhow fell short.
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you imagine it, in the spec or in the result.

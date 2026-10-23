@@ -1,0 +1,28 @@
+name: Bug report
+description: Something in a video, a guide or the CLI is wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead. A frame or a short clip helps a lot.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The command you ran and the smallest spec that shows it (remove anything private).
+      render: yaml
+    validations: { required: true }
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: What the command printed. Never paste your ElevenLabs key.
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: macOS 15, Node 24.1, Chrome 141, ffmpeg 7.1
