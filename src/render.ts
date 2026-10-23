@@ -59,8 +59,10 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   const problems: string[] = [];
   for (const [what, state] of layouts) {
     await page.evaluate((s) => (window as any).draw(s), state);
-    for (const issue of await page.evaluate(() => (window as any).layoutIssues() as string[])) problems.push(`${what}: ${issue}`);
-    for (const w of await page.evaluate(() => (window as any).paletteIssues() as string[])) console.warn(`render: palette: ${what}: ${w}`);
+    const checks = await page.evaluate(() => { const w = window as any; return { layout: w.layoutIssues() as string[], palette: w.paletteIssues() as string[], legibility: w.legibilityIssues() as string[] }; });
+    for (const issue of checks.layout) problems.push(`${what}: ${issue}`);
+    for (const w of checks.palette) console.warn(`render: palette: ${what}: ${w}`);
+    for (const w of checks.legibility) console.warn(`render: legibility: ${what}: ${w}`);
   }
   if (problems.length) {
     await browser.close();

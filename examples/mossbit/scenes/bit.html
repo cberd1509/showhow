@@ -16,7 +16,8 @@
   #word span { display: inline-block; }
   #word span.dot { color: var(--accent); }
   #line { position: absolute; font-family: var(--heading); font-weight: 500; font-size: 66px; line-height: 1.15; color: var(--text); }
-  #line em { font-style: normal; color: var(--palette-2); }
+  /* Clay, deepened toward the text colour so the words read on cream. */
+  #line em { font-style: normal; color: color-mix(in srgb, var(--palette-2) 70%, var(--text)); }
   .leaf { position: absolute; width: 34px; height: 18px; border-radius: 0 100% 0 100%; background: var(--accent); }
   .leaf:nth-child(3n) { background: var(--palette-1); width: 22px; height: 22px; border-radius: 50%; }
   .leaf:nth-child(3n+1) { background: var(--palette-2); }

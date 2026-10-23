@@ -25,15 +25,15 @@
   h1 span { display: inline-block; white-space: pre; }
   h1 span.hl { background: linear-gradient(100deg, var(--text, #fff) 10%, color-mix(in srgb, var(--accent) 55%, var(--text, #fff)) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .cols { margin-top: 54px; display: grid; gap: 36px; align-items: start; }
-  .col { border-radius: 26px; padding: 34px 36px 30px; background: color-mix(in srgb, var(--text, #fff) 5.5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text, #fff) 10%, transparent); backdrop-filter: blur(8px); }
+  .col { border-radius: 26px; padding: 34px 36px 30px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); backdrop-filter: blur(8px); }
   .col h2 { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
   .col h2 em { font-style: normal; font-size: 18px; font-weight: 600; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px;
     color: color-mix(in srgb, var(--accent) 35%, var(--text, #fff)); background: color-mix(in srgb, var(--accent) 20%, transparent); }
   .col ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
-  .col li { display: flex; align-items: flex-start; gap: 16px; font-size: 27px; line-height: 1.32; color: color-mix(in srgb, var(--text, #fff) 90%, transparent); }
+  .col li { display: flex; align-items: flex-start; gap: 16px; font-size: 27px; line-height: 1.32; color: var(--soft); }
   .col li i { flex: none; margin-top: 9px; width: 14px; height: 14px; border-radius: 5px; background: var(--accent); box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); }
   .footer { align-self: center; margin-top: 40px; padding: 16px 28px; border-radius: 16px; font-size: 27px; font-weight: 500;
-    background: color-mix(in srgb, var(--text, #fff) 8%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text, #fff) 12%, transparent); }
+    background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
   @media (max-aspect-ratio: 1/1) { #root { padding: 200px 80px 0; } .cols { grid-template-columns: 1fr !important; gap: 24px; margin-top: 40px; } h1 { font-size: 80px; } .footer { align-self: stretch; text-align: center; } }
 </style>
 </head>

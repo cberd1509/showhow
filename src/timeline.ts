@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { Spec, Step } from './spec.ts';
 import { GEOMETRY } from './format.ts';
 import { blockPage, reactPage } from './bundle.ts';
@@ -54,12 +55,21 @@ export type CardState = Omit<NonNullable<Step['card']>, 'image'> & {
 /** A built-in backdrop's name, a shader file (its path, for caching, and its source), or a page. */
 export type StageBackdrop = string | { name: string; src: string } | { url: string };
 
-/** The page a scene step shows: a built-in template (`showhow:name`), an HTML file, a React component or a HyperFrames block. */
+type PageSource = { html?: string; react?: string; props?: unknown; export?: string; hyperframes?: string; vars?: Record<string, unknown> };
+
+/** A full-frame page (scene or backdrop): a React component, a HyperFrames block, or an HTML file (`showhow:name` is a built-in scene). */
+function pageUrl(src: PageSource, specDir: string): string | undefined {
+  if (src.react) return reactPage(path.resolve(specDir, src.react), src.props, src.export);
+  if (src.hyperframes) return blockPage(path.resolve(specDir, src.hyperframes), src.vars);
+  if (!src.html) return undefined;
+  return pathToFileURL(src.html.startsWith('showhow:') ? path.join(SCENES, `${src.html.slice(8)}.html`) : path.resolve(specDir, src.html)).href;
+}
+
+/** The page a scene step shows. */
 export function scenePage(sc: NonNullable<Step['scene']>, specDir: string): string {
-  if (sc.react) return reactPage(path.resolve(specDir, sc.react), sc.props, sc.export);
-  if (sc.hyperframes) return blockPage(path.resolve(specDir, sc.hyperframes), sc.vars);
-  if (!sc.html) throw new Error('a scene needs html, react or hyperframes');
-  return `file://${sc.html.startsWith('showhow:') ? path.join(SCENES, `${sc.html.slice(8)}.html`) : path.resolve(specDir, sc.html)}`;
+  const url = pageUrl(sc, specDir);
+  if (!url) throw new Error('a scene needs html, react or hyperframes');
+  return url;
 }
 
 /** The step's backdrop, else the theme's, else the aurora; a shader file is read for the stage. */
@@ -70,9 +80,7 @@ export function resolveBackdrop(spec: Spec, step: Step, specDir: string): StageB
     const file = path.resolve(specDir, b.shader);
     return { name: file, src: readFileSync(file, 'utf8') };
   }
-  if ('react' in b) return { url: reactPage(path.resolve(specDir, b.react), b.props, b.export) };
-  if ('hyperframes' in b) return { url: blockPage(path.resolve(specDir, b.hyperframes), b.vars) };
-  return { url: `file://${path.resolve(specDir, b.html)}` };
+  return { url: pageUrl(b, specDir)! };
 }
 
 export interface Chapter {
@@ -242,8 +250,7 @@ export class Timeline {
   private zoomOn(b: Box, fixed?: number): Cam {
     // A trailer frames the proof tighter: the element fills more of the shot.
     const fill = this.trailer ? 0.6 : 0.42;
-    // A page recorded for a portrait window already fills it: the ring shows the target, no push-in.
-    const max = this.vis.h > this.vis.w ? 1 : this.trailer ? 2.1 : MAX_ZOOM;
+    const max = Math.min(GEOMETRY[this.spec.format ?? 'landscape'].maxZoom ?? Infinity, this.trailer ? 2.1 : MAX_ZOOM);
     const scale = fixed ?? Math.min(max, Math.max(1, Math.min((fill * this.vis.w) / b.w, (fill * this.vis.h) / b.h)));
     const hw = this.vis.w / (2 * scale);
     const hh = this.vis.h / (2 * scale);
@@ -376,7 +383,7 @@ export class Timeline {
   sceneState(placed: Placed, age: number, alpha: number): NonNullable<DrawState['scene']> {
     const sc = placed.step.scene!;
     const words = this.lines.get(placed.step.id)?.words ?? [];
-    return { key: placed.step.id, src: scenePage(sc, this.specDir), base: `file://${path.resolve(this.specDir)}/`, age, duration: placed.end - placed.start, alpha, data: sc.data, words, backdrop: this.backdrop(placed.step) };
+    return { key: placed.step.id, src: this.resolved(placed.step).scene!, base: `file://${path.resolve(this.specDir)}/`, age, duration: placed.end - placed.start, alpha, data: sc.data, words, backdrop: this.backdrop(placed.step) };
   }
 
   cardState(placed: Placed, age: number, alpha: number): CardState {
@@ -389,7 +396,15 @@ export class Timeline {
 
   /** The step's backdrop for the stage: a built-in name, or a shader file's source. */
   private backdrop(step: Step): StageBackdrop {
-    return resolveBackdrop(this.spec, step, this.specDir);
+    return this.resolved(step).backdrop;
+  }
+
+  /** A step's scene page and backdrop, resolved once (files read, components bundled), not every frame. */
+  private pages = new Map<string, { scene?: string; backdrop: StageBackdrop }>();
+  private resolved(step: Step) {
+    let r = this.pages.get(step.id);
+    if (!r) this.pages.set(step.id, (r = { scene: step.scene ? scenePage(step.scene, this.specDir) : undefined, backdrop: resolveBackdrop(this.spec, step, this.specDir) }));
+    return r;
   }
 
   /** The intro shows the first recorded step; any later card, the one before it. */

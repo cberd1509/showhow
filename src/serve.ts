@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import type { Spec } from './spec.ts';
@@ -22,15 +23,21 @@ export async function withServer<T>(spec: Spec, dir: string, fn: () => Promise<T
       /* already gone */
     }
   };
+  // Ctrl-C (or a kill) ends the run without reaching `finally`: stop the server on the way out too.
+  const onSignal = (sig: NodeJS.Signals) => { stop(); process.exit(sig === 'SIGINT' ? 130 : 143); };
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
   try {
     const until = Date.now() + (s.timeout ?? 30) * 1000;
     while (!(await answers(url))) {
       if (child.exitCode !== null) throw new Error(`serve: "${s.command}" exited (${child.exitCode})\n${err}`);
       if (Date.now() > until) throw new Error(`serve: nothing answered at ${url} after ${s.timeout ?? 30}s\n${err}`);
-      await new Promise((r) => setTimeout(r, 300));
+      await sleep(300);
     }
     return await fn();
   } finally {
+    process.off('SIGINT', onSignal);
+    process.off('SIGTERM', onSignal);
     stop();
   }
 }

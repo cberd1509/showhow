@@ -24,13 +24,13 @@
   h1 .hl { background: linear-gradient(100deg, var(--text, #fff) 10%, color-mix(in srgb, var(--accent) 55%, var(--text, #fff)) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 210px; }
   .grid { display: grid; gap: 36px; }
-  .stat { padding: 40px 40px 36px; border-radius: 26px; background: color-mix(in srgb, var(--text, #fff) 5.5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text, #fff) 10%, transparent); }
+  .stat { padding: 40px 40px 36px; border-radius: 26px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
   .num { font-family: var(--heading, var(--font)); font-size: 120px; font-weight: 760; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .num small { font-size: .5em; letter-spacing: -.02em; color: color-mix(in srgb, var(--accent) 45%, var(--text, #fff)); }
   .bar { margin: 26px 0 22px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent)); transform-origin: 0 50%; }
   .label { font-size: 30px; font-weight: 650; letter-spacing: -.01em; }
-  .sub { margin-top: 8px; font-size: 23px; color: color-mix(in srgb, var(--text, #fff) 65%, transparent); }
-  .note { margin-top: 36px; font-size: 24px; color: color-mix(in srgb, var(--text, #fff) 60%, transparent); }
+  .sub { margin-top: 8px; font-size: 23px; color: var(--muted); }
+  .note { margin-top: 36px; font-size: 24px; color: var(--muted); }
   @media (max-aspect-ratio: 1/1) { #root { padding: 200px 80px 0; } .body { padding-bottom: 440px; } .grid { grid-template-columns: 1fr !important; gap: 28px; } .num { font-size: 130px; } }
 </style>
 </head>

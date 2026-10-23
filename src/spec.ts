@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { GEOMETRY } from './format.ts';
 import { parse } from 'yaml';
 import { merge } from './merge.ts';
 
@@ -189,13 +190,6 @@ export interface Spec {
   steps: Step[];
 }
 
-export const DEFAULT_VIEWPORT = { width: 1280, height: 720, scale: 1.5 };
-/**
- * A vertical video records the app at a narrow portrait viewport shaped like its window (960×1180),
- * so the site lays itself out for a small screen and the whole page fits the frame: no desktop page
- * cropped to a slice.
- */
-export const VERTICAL_VIEWPORT = { width: 440, height: 541, scale: 2.5 };
 
 export function loadSpec(file: string): { spec: Spec; dir: string } {
   const spec = read(path.resolve(file));
@@ -209,9 +203,9 @@ export function loadSpec(file: string): { spec: Spec; dir: string } {
   // An image that names no step would silently leave the card or poster without its picture.
   const images = [...spec.steps.map((s) => s.card?.image), spec.poster?.image].filter((x): x is string => typeof x === 'string');
   for (const image of images) if (!ids.has(image)) throw new Error(`${file}: image "${image}" is not a step id`);
-  spec.viewport ??= spec.format === 'vertical' ? VERTICAL_VIEWPORT : DEFAULT_VIEWPORT;
+  spec.viewport ??= GEOMETRY[spec.format ?? 'landscape'].viewport;
   if (spec.format === 'vertical' && spec.viewport.width > spec.viewport.height && spec.steps.some((s) => s.do?.length && !s.card && !s.scene))
-    console.warn(`${file}: a vertical video recorded at a landscape viewport (${spec.viewport.width}×${spec.viewport.height}) shows a cropped slice of each page; leave \`viewport\` out (it records at ${VERTICAL_VIEWPORT.width}×${VERTICAL_VIEWPORT.height}) or set a portrait one`);
+    console.warn(`${file}: a vertical video recorded at a landscape viewport (${spec.viewport.width}×${spec.viewport.height}) shows a cropped slice of each page; leave \`viewport\` out (it records at ${GEOMETRY.vertical.viewport.width}×${GEOMETRY.vertical.viewport.height}) or set a portrait one`);
   spec.profile ??= new URL(spec.app).hostname;
   const dir = path.dirname(path.resolve(file));
   // A goto without a scheme is a file next to the spec (a local HTML report, a prototype).

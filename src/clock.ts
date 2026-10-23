@@ -27,11 +27,12 @@ export const CLOCK_SCRIPT = `(() => {
 
   performance.now = () => now * 1000;
   const RealDate = Date;
-  class ClockDate extends RealDate {
-    constructor(...a) { if (a.length) super(...a); else super(EPOCH + now * 1000); }
-    static now() { return EPOCH + now * 1000; }
-  }
-  window.Date = ClockDate;
+  // new Date() is the clock's time; Date() (a string) and Date.now() too; everything else is the real Date.
+  window.Date = new Proxy(RealDate, {
+    construct: (T, a) => (a.length ? new T(...a) : new T(EPOCH + now * 1000)),
+    apply: () => new RealDate(EPOCH + now * 1000).toString(),
+    get: (T, p) => (p === 'now' ? () => EPOCH + now * 1000 : Reflect.get(T, p)),
+  });
 
   window.requestAnimationFrame = (cb) => { frames.set(++seq, cb); return seq; };
   window.cancelAnimationFrame = (id) => frames.delete(id);
@@ -75,6 +76,9 @@ export const CLOCK_SCRIPT = `(() => {
     // Forward in steps of at most 1/60 s, so loops that integrate (physics, trails) see every frame.
     set(t) {
       if (t < now) { now = t; tick(); syncAnimations(); return; }
+      // A long jump (a backdrop first shown late in the video) skips ahead: stepping through
+      // minutes of frames would run thousands of renders for one frame.
+      if (t - now > 1) now = t - 0.5;
       let steps = 0;
       while (now < t - 1e-9 && steps++ < 3600) { now = Math.min(t, now + 1 / 60); tick(); }
       now = t;

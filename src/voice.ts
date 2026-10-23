@@ -34,14 +34,14 @@ export async function voice(file: string): Promise<Line[]> {
   mkdirSync(dir, { recursive: true });
   // ElevenLabs unless the spec asks for the macOS voice (a local draft only: it sounds robotic).
   const provider = spec.voice?.provider ?? 'elevenlabs';
-  if (provider === 'elevenlabs' && !process.env.ELEVENLABS_API_KEY) throw new Error('no ElevenLabs key: run `showhow key` in your own terminal (or `voice: { provider: say }` for a rough local draft)');
   // The model actually used, in the cache key: a new default re-voices instead of reusing old audio.
   const model = provider === 'elevenlabs' ? spec.voice?.model ?? ELEVEN_DEFAULT_MODEL : undefined;
   const spoken = spec.steps.filter((s) => s.say);
 
   const lines: Line[] = [];
   const pronounce = Object.entries(spec.voice?.pronounce ?? {});
-  const speakable = (s: string) => pronounce.reduce((t, [w, sp]) => t.split(w).join(sp), s.trim());
+  // [audio tags] direct Eleven v3's delivery; any other voice would read them aloud.
+  const speakable = (s: string) => pronounce.reduce((t, [w, sp]) => t.split(w).join(sp), model === 'eleven_v3' ? s.trim() : plainSay(s));
   for (const [i, step] of spoken.entries()) {
     const text = speakable(step.say!);
     const key = createHash('sha1')
@@ -72,7 +72,7 @@ export async function voice(file: string): Promise<Line[]> {
     console.log(`voice: ${step.id} (${provider})`);
     const line =
       provider === 'elevenlabs'
-        ? await eleven(spec, step.id, text, base, prev, next)
+        ? await eleven(spec, model!, step.id, text, base, prev, next)
         : say(spec, step.id, text, base);
     line.words = untag(unpronounce(line.words, pronounce));
     writeFileSync(meta, JSON.stringify(line, null, 2));
@@ -95,11 +95,11 @@ export function readLines(file: string): Map<string, Line> {
   return new Map(lines.map((l) => [l.step, l]));
 }
 
-async function eleven(spec: Spec, step: string, text: string, base: string, prev?: string, next?: string): Promise<Line> {
+async function eleven(spec: Spec, model: string, step: string, text: string, base: string, prev?: string, next?: string): Promise<Line> {
   const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) throw new Error('ELEVENLABS_API_KEY is not set');
+  if (!key) throw new Error('no ElevenLabs key: run `showhow key` in your own terminal (or `voice: { provider: say }` for a rough local draft)');
   const voiceId = spec.voice?.voice ?? ELEVEN_DEFAULT_VOICE;
-  const v3 = (spec.voice?.model ?? ELEVEN_DEFAULT_MODEL) === 'eleven_v3';
+  const v3 = model === 'eleven_v3';
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps?output_format=mp3_44100_128`,
     {
@@ -107,7 +107,7 @@ async function eleven(spec: Spec, step: string, text: string, base: string, prev
       headers: { 'xi-api-key': key, 'content-type': 'application/json' },
       body: JSON.stringify({
         text,
-        model_id: spec.voice?.model ?? ELEVEN_DEFAULT_MODEL,
+        model_id: model,
         language_code: spec.voice?.language,
         // Neighbouring lines keep the intonation continuous across steps (older models; v3 doesn't take them).
         ...(v3 ? {} : { previous_text: prev, next_text: next }),

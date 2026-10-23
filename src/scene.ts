@@ -49,7 +49,8 @@ export async function previewScene(file: string, id: string) {
       gsapDir: `file://${path.resolve(import.meta.dirname, '..', 'node_modules', 'gsap', 'dist')}`,
       liftDir: `file://${lifts}`,
     });
-    const state = (t: number) => ({ src, base: `file://${path.resolve(dir)}/`, age: t, duration, alpha: 1, data: step.scene!.data, words: line?.words ?? [], backdrop: resolveBackdrop(spec, step, dir) });
+    const backdrop = resolveBackdrop(spec, step, dir);
+    const state = (t: number) => ({ src, base: `file://${path.resolve(dir)}/`, age: t, duration, alpha: 1, data: step.scene!.data, words: line?.words ?? [], backdrop });
     const sounds = (await page.evaluate((s) => (window as any).sceneSounds(s), state(0))) as { t: number; name: string }[];
     const dirOut = path.join(out, 'scenes', id);
     mkdirSync(dirOut, { recursive: true });
@@ -61,8 +62,7 @@ export async function previewScene(file: string, id: string) {
       await page.screenshot({ path: f, type: 'jpeg', quality: 82 });
       stills.push(f);
     }
-    const issues = (await page.evaluate(() => (window as any).layoutIssues())) as string[];
-    const palette = (await page.evaluate(() => (window as any).paletteIssues())) as string[];
+    const { issues, palette, legibility } = await page.evaluate(() => { const w = window as any; return { issues: w.layoutIssues() as string[], palette: w.paletteIssues() as string[], legibility: w.legibilityIssues() as string[] }; });
     const sheet = path.join(dirOut, 'sheet.jpg');
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...stills.flatMap((f) => ['-i', f]), '-filter_complex',
       stills.map((_, i) => `[${i}:v]scale=640:-1[v${i}]`).join(';') + ';' + stills.map((_, i) => `[v${i}]`).join('') + 'xstack=inputs=8:layout=0_0|w0_0|w0+w1_0|w0+w1+w2_0|0_h0|w0_h0|w0+w1_h0|w0+w1+w2_h0', sheet]);
@@ -72,6 +72,7 @@ export async function previewScene(file: string, id: string) {
     if (errors.length) console.log(`  errors:\n    ${errors.join('\n    ')}`);
     console.log(issues.length ? `  layout (settled):\n    ${issues.join('\n    ')}` : '  layout: clean');
     console.log(palette.length ? `  palette:\n    ${palette.join('\n    ')}` : '  palette: on brand');
+    console.log(legibility.length ? `  legibility:\n    ${legibility.join('\n    ')}` : '  legibility: readable');
   } finally {
     await browser.close();
   }

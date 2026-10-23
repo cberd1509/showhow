@@ -33,7 +33,7 @@ steps:
     scene:
       html: scenes/wilt.html
       data:
-        line: A month ago, our plants were struggling.
+        line: Our plants were struggling.
         notes: [{ text: "Did anyone water this?", cue: guessing }, { text: "I thought you did!", cue: twice }, { text: "Is it… plastic?", cue: never }]
     say: A month ago, our plants were struggling. We were guessing, watering twice, or never.
     do:

@@ -45,7 +45,6 @@ async function main() {
   switch (command) {
     case 'add': {
       const { add } = await import('./add.ts');
-      if (!rest[0]) throw new Error('add what? e.g. showhow add reactbits:Silk');
       return add(rest[0], values.to);
     }
     case 'key': {

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildSync } from 'esbuild';
 
@@ -15,7 +15,10 @@ const REACT = '18.3.1';
 export function reactPage(file: string, props: unknown = {}, exportName = 'default'): string {
   const abs = path.resolve(file);
   if (!existsSync(abs)) throw new Error(`no component at ${abs}`);
-  const key = createHash('sha1').update(JSON.stringify([abs, statSync(abs).mtimeMs, props, exportName, REACT])).digest('hex').slice(0, 12);
+  // Keyed on every file in the component's folder (its CSS, helpers, shaders get bundled too).
+  const dir = path.dirname(abs);
+  const files = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((f) => f.isFile()).map((f) => path.join(f.parentPath, f.name)).sort();
+  const key = createHash('sha1').update(JSON.stringify([abs, files.map((f) => [f, statSync(f).mtimeMs]), props, exportName, REACT])).digest('hex').slice(0, 12);
   const out = path.join(CACHE, key);
   const page = path.join(out, 'index.html');
   if (existsSync(page)) return `file://${page}`;

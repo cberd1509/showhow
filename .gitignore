@@ -1,7 +1,23 @@
+# Dependencies and caches
 node_modules/
+.cache/
+
+# Secrets: the ElevenLabs key lives in ~/.config/showhow/.env, never here
 .env
+.env.*
+
+# Browser profiles (signed-in sessions) and everything showhow generates
 .profiles/
 showhow-output/
-.DS_Store
 scratch/
-.cache/
+
+# Components installed with `showhow add` (React Bits' license forbids redistributing them)
+vendor/
+
+# Local tools and logs
+.DS_Store
+*.log
+.idea/
+.vscode/
+.serena/
+.claude/settings.local.json

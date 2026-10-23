@@ -9,7 +9,8 @@ import path from 'node:path';
  *   hyperframes:starfield a HyperFrames catalog block or component (`hyperframes add`)
  * It prints the spec line that uses it.
  */
-export async function add(what: string, to = 'vendor') {
+export async function add(what: string | undefined, to = 'vendor') {
+  if (!what) throw new Error('add what? e.g. showhow add reactbits:Silk');
   const [source, name] = what.includes(':') ? what.split(/:(.*)/s) : ['', what];
   if (!name) throw new Error('add what? e.g. reactbits:Silk or hyperframes:starfield');
   if (source === 'reactbits') {
@@ -26,6 +27,7 @@ export async function add(what: string, to = 'vendor') {
     if (item.dependencies?.length) console.log(`  npm dependencies (loaded from esm.sh at render): ${item.dependencies.join(', ')}`);
     console.log(`  use it:  backdrop: { react: ${path.relative(process.cwd(), path.join(dir, path.basename(main?.path ?? `${name}.jsx`)))}, props: { … } }`);
     console.log('  (or `scene: { react: …, props: … }`). Props are documented on its reactbits.dev page.');
+    console.log(`  Paths in a spec are relative to the spec's folder: run \`showhow add\` there (this one went to ${process.cwd()}).`);
     return;
   }
   if (source === 'hyperframes') {
@@ -37,6 +39,7 @@ export async function add(what: string, to = 'vendor') {
     console.log(`add: ${json.written.join(', ')}`);
     for (const f of json.written as string[]) if (f.endsWith('.html')) console.log(`  use it:  backdrop: { hyperframes: ${path.relative(process.cwd(), f)}, vars: { … } }   (or scene: { hyperframes: …, vars })`);
     console.log('  Its variables are listed in data-composition-variables at the top of the file. Search the catalog: npx hyperframes catalog <words> --json');
+    console.log(`  Paths in a spec are relative to the spec's folder: run \`showhow add\` there (this one went to ${process.cwd()}).`);
     return;
   }
   throw new Error(`unknown source "${source}": reactbits or hyperframes`);

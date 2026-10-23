@@ -118,6 +118,40 @@
 <script src="../node_modules/motion/dist/motion.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
+
+  // Colours as [r, g, b, a] (0–255, alpha 0–1). Computed styles come as rgb()/rgba(), or as
+  // color(srgb r g b / a) with 0–1 channels for color-mix() and other modern colours.
+  function toRgba(c) {
+    const m = c && c.match(/[\d.]+/g)?.map(Number);
+    if (!m || m.length < 3) return null;
+    const unit = /^\s*color\(srgb/.test(c) ? 255 : 1;
+    return [m[0] * unit, m[1] * unit, m[2] * unit, m.length > 3 ? m[3] : 1];
+  }
+  // Any CSS colour (a name, var(--x), color-mix…) as the browser computes it.
+  function resolveColor(css, doc = document) {
+    const i = doc.createElement('i');
+    i.style.color = css;
+    doc.body.appendChild(i);
+    const c = doc.defaultView.getComputedStyle(i).color;
+    i.remove();
+    return c;
+  }
+  function hsl(c) {
+    const x = toRgba(c);
+    if (!x) return null;
+    const [r, g, b] = x.slice(0, 3).map((v) => v / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+    if (!d) return { h: 0, s: 0, l, a: x[3] };
+    const s = d / (1 - Math.abs(2 * l - 1));
+    const h = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+    return { h: (h + 360) % 360, s, l, a: x[3] };
+  }
+  // How visible an element is: its opacity times every ancestor's (a crossfade's old layer is faint).
+  function opacityOf(el, win) {
+    let o = 1;
+    for (let a = el; a && a.nodeType === 1; a = a.parentElement) o *= Number(win.getComputedStyle(a).opacity);
+    return o;
+  }
   let W = 1280, H = 720;
   let WIN_W = 1692, WIN_H = 952;
   // The frame: set by setup() from src/format.ts.
@@ -145,8 +179,6 @@
     window.PALETTE_EXTRA = opts.theme.palette || [];
     window.PALETTE = [opts.theme.background, opts.theme.background2, opts.theme.accent, opts.theme.text, ...window.PALETTE_EXTRA].filter(Boolean);
     window.FONTS_CSS = opts.fontsCss || '';
-    // The default backdrop (theme.backdrop); a step can choose another.
-    window.BACKDROP = opts.backdrop || 'aurora';
     if (opts.theme.text) r.setProperty('--text', opts.theme.text);
     if (opts.theme.onAccent) r.setProperty('--on-accent', opts.theme.onAccent);
     $('title').textContent = opts.title || '';
@@ -210,22 +242,10 @@
   // card whose hue is far from every palette colour. A lifted panel in the app's own colour inside a
   // video that wears another brand is the usual case; `retint` fixes it. Warnings, not failures.
   window.paletteIssues = () => {
-    const hsl = (c) => {
-      const m = c && c.match(/[\d.]+/g)?.map(Number);
-      if (!m || m.length < 3 || (m.length > 3 && m[3] < 0.2)) return null;
-      const [r, g, b] = m.slice(0, 3).map((v) => v / 255);
-      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
-      if (!d) return { h: 0, s: 0, l };
-      const s = d / (1 - Math.abs(2 * l - 1));
-      const h = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
-      return { h: (h + 360) % 360, s, l };
-    };
-    const probe = document.createElement('i');
-    document.body.appendChild(probe);
-    const brand = (window.PALETTE || []).map((c) => { probe.style.color = c; return hsl(getComputedStyle(probe).color); }).filter((x) => x && x.s >= 0.2);
-    probe.remove();
+    const brand = (window.PALETTE || []).map((c) => hsl(resolveColor(c))).filter((x) => x && x.s >= 0.2);
     if (!brand.length) return [];
-    const loud = (x) => x && x.s >= 0.45 && x.l > 0.18 && x.l < 0.85;
+    // Nearly transparent colours don't show: they're not off-brand.
+    const loud = (x) => x && x.a >= 0.2 && x.s >= 0.45 && x.l > 0.18 && x.l < 0.85;
     const off = (x) => brand.every((b) => Math.min(Math.abs(x.h - b.h), 360 - Math.abs(x.h - b.h)) > 26);
     const seen = new Map();
     const look = (doc, win, where) => {
@@ -251,46 +271,46 @@
     const frame = $('scene');
     if (+frame.style.opacity > 0 && frame.contentDocument) look(frame.contentDocument, frame.contentWindow, 'scene');
     if (+$('card').style.opacity > 0) look(document, window, 'card');
-    const out = [...seen.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 4)
+    return [...seen.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 4)
       .map((e) => `${e.where} uses ${e.v} (${e.n} elements${e.text ? `, e.g. "${e.text}"` : ''}), outside the palette: retint it or add it to theme.palette`);
-    if (+frame.style.opacity > 0 && frame.contentDocument) out.push(...faintText(frame.contentDocument, frame.contentWindow));
-    return out;
   };
 
-  // Text too faint to read: a scene's text against what is behind it (its nearest solid background,
-  // else the video's background), e.g. light-on-light from a scene written for a dark theme.
-  function faintText(doc, win) {
-    const rgba = (c) => { const m = c && c.match(/[\d.]+/g)?.map(Number); return m && m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+  // Text too faint to read, in a card or a scene: against its nearest solid background, else the
+  // video's background. Usually light-on-light from colours written for a dark theme.
+  window.legibilityIssues = () => {
     const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
     const over = (top, under) => top.slice(0, 3).map((v, i) => v * top[3] + under[i] * (1 - top[3]));
-    const page = rgba(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() ? (() => { const i = document.createElement('i'); i.style.color = 'var(--bg)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; })() : 'rgb(0,0,0)');
+    const page = toRgba(resolveColor('var(--bg)'));
     const found = new Map();
-    for (const el of doc.querySelectorAll('body *')) {
-      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
-      const cs = win.getComputedStyle(el);
-      const fg = rgba(cs.color);
-      if (!fg || fg[3] < 0.05 || cs.visibility === 'hidden' || /text/.test(cs.backgroundClip + cs.webkitBackgroundClip)) continue;
-      const r = el.getBoundingClientRect();
-      if (r.width < 2 || r.height < 2) continue;
-      // Settled, fully shown text only: mid-fade text is faint on purpose.
-      let shown = 1, behind = null, unknown = false;
-      for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
-        const ac = win.getComputedStyle(a);
-        shown *= +ac.opacity;
-        if (!behind && ac.backgroundImage !== 'none') unknown = true;
-        const bg = rgba(ac.backgroundColor);
-        if (!behind && !unknown && bg && bg[3] >= 0.6) behind = over(bg, page);
+    const look = (doc, win, root, where) => {
+      for (const el of root.querySelectorAll('*')) {
+        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) || el.closest('[aria-hidden=true]')) continue;
+        const cs = win.getComputedStyle(el);
+        const fg = toRgba(cs.color);
+        if (!fg || fg[3] < 0.05 || cs.visibility === 'hidden' || /text/.test(cs.backgroundClip + cs.webkitBackgroundClip)) continue;
+        const r = el.getBoundingClientRect();
+        // Settled, fully shown text only: mid-fade text is faint on purpose.
+        if (r.width < 2 || r.height < 2 || opacityOf(el, win) < 0.95) continue;
+        // The nearest solid background; a gradient or image first means we can't tell: skip.
+        let back = page, unknown = false;
+        for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
+          const ac = win.getComputedStyle(a);
+          const bg = toRgba(ac.backgroundColor);
+          if (bg && bg[3] >= 0.6) { back = over(bg, page); break; }
+          if (ac.backgroundImage !== 'none') { unknown = true; break; }
+        }
+        if (unknown) continue;
+        const L1 = lum(over(fg, back)), L2 = lum(back);
+        const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+        const text = el.textContent.trim().slice(0, 30);
+        if (ratio < 3 && !found.has(text)) found.set(text, { where, ratio });
       }
-      if (shown < 0.95 || (unknown && !behind)) continue;
-      const back = behind || page;
-      const L1 = lum(over(fg, back)), L2 = lum(back);
-      const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
-      if (ratio >= 3) continue;
-      const text = el.textContent.trim().slice(0, 30);
-      if (!found.has(text)) found.set(text, ratio);
-    }
-    return [...found].slice(0, 4).map(([text, ratio]) => `scene text "${text}" is hard to read (contrast ${ratio.toFixed(1)}:1, aim for 4.5): use var(--text) or a mix of it`);
-  }
+    };
+    const frame = $('scene');
+    if (+frame.style.opacity > 0 && frame.contentDocument) look(frame.contentDocument, frame.contentWindow, frame.contentDocument.body, 'scene');
+    if (+$('card').style.opacity > 0) look(document, window, $('card').querySelector('.text'), 'card');
+    return [...found].slice(0, 4).map(([text, { where, ratio }]) => `${where} text "${text}" is hard to read (contrast ${ratio.toFixed(1)}:1, aim for 4.5): use var(--text) or a mix of it`);
+  };
 
   window.layoutIssues = () => {
     const CAPTION_TOP = G.captionTop, S = G.safe;
@@ -301,7 +321,7 @@
       return [...range.getClientRects()].reduce((a, b) => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) }),
         { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
     };
-    const hit = (a, b) => a.right > b.left + 2 && a.left < b.right - 2 && a.bottom > b.top + 2 && a.top < b.bottom - 2;
+    const hit = (a, b, slack = 2) => a.right > b.left + 2 && a.left < b.right - 2 && a.bottom > b.top + slack && a.top < b.bottom - slack;
     const say = (el) => `"${el.textContent.trim().slice(0, 48)}"`;
     const card = $('card');
     if (Number(card.style.opacity) > 0) {
@@ -322,14 +342,9 @@
     const frame = $('scene');
     if (Number(frame.style.opacity) > 0 && frame.contentDocument) {
       const doc = frame.contentDocument;
-      // Seen: not hidden, and not faded out by itself or anything around it (a crossfade's old layer).
-      const seen = (el) => {
-        let o = 1;
-        for (let a = el; a && a !== doc.body; a = a.parentElement) o *= Number(frame.contentWindow.getComputedStyle(a).opacity);
-        return o > 0.05;
-      };
+      // Seen: not hidden, and not faded out by itself or anything around it.
       const blocks = [...doc.body.querySelectorAll('*')].filter((el) =>
-        [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) && frame.contentWindow.getComputedStyle(el).visibility !== 'hidden' && seen(el));
+        [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) && frame.contentWindow.getComputedStyle(el).visibility !== 'hidden' && opacityOf(el, frame.contentWindow) > 0.05);
       // Text entirely clipped away by an overflow-hidden parent (a phone screen, a mask) isn't on screen.
       const shown = (el, g) => {
         for (let a = el.parentElement; a && a !== doc.body; a = a.parentElement) {
@@ -347,6 +362,13 @@
         if (!el.closest('[data-lift]') && el.scrollWidth > el.clientWidth + 1 && frame.contentWindow.getComputedStyle(el).overflow !== 'visible') issues.push(`scene text is clipped: ${say(el)}`);
         if (g.bottom > CAPTION_TOP) issues.push(`scene text sits where captions go: ${say(el)}`);
       }
+      // Line by line: text that wraps (an inline run over two lines) is two boxes, not their union.
+      // Measured only for blocks whose overall boxes meet, and once each.
+      const lineBoxes = new Map();
+      const lines = (el) => {
+        if (!lineBoxes.has(el)) { const r = doc.createRange(); r.selectNodeContents(el); lineBoxes.set(el, [...r.getClientRects()].filter((x) => x.width > 1)); }
+        return lineBoxes.get(el);
+      };
       for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
         const a = boxes[i], b = boxes[j];
         if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
@@ -357,10 +379,7 @@
         // lines overlap there without touching. Allow that much, in proportion to the type.
         const fs = Math.min(parseFloat(frame.contentWindow.getComputedStyle(a.el).fontSize), parseFloat(frame.contentWindow.getComputedStyle(b.el).fontSize));
         const slack = Math.max(2, fs * 0.14);
-        // Line by line: text that wraps (an inline run over two lines) is two boxes, not their union.
-        const lines = (el) => { const r = doc.createRange(); r.selectNodeContents(el); return [...r.getClientRects()].filter((x) => x.width > 1); };
-        const hit = (p, q) => p.right > q.left + 2 && p.left < q.right - 2 && p.bottom > q.top + slack && p.top < q.bottom - slack;
-        const over = hit(a.g, b.g) && lines(a.el).some((p) => lines(b.el).some((q) => hit(p, q)));
+        const over = hit(a.g, b.g, slack) && lines(a.el).some((p) => lines(b.el).some((q) => hit(p, q, slack)));
         if (over) issues.push(`scene text collides: ${say(a.el)} and ${say(b.el)}`);
       }
     }
@@ -707,7 +726,7 @@
   };
   let gl, buf;
   const programs = new Map();
-  const rgbOf = (v) => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = (v || '#000').trim(); c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3).map((x) => x / 255); };
+  const rgbOf = (v) => toRgba(resolveColor((v || '#000').trim())).slice(0, 3).map((x) => x / 255);
   function program(name, src) {
     if (programs.has(name)) return programs.get(name);
     const sh = (type, code) => {
@@ -746,6 +765,12 @@
     }
     if (!root.childElementCount) throw new Error('a React page rendered nothing: check its import (browser console) and its export');
   }
+  // A HyperFrames block registers a paused GSAP timeline by composition id.
+  function blockTimeline(win) {
+    const tl = win.__timelines && Object.values(win.__timelines)[0];
+    tl?.pause();
+    return tl;
+  }
   async function loadBackdrop(which) {
     if (!which || typeof which !== 'object' || !which.url) return;
     const f = $('bdframe');
@@ -759,18 +784,21 @@
     await new Promise((r) => setTimeout(r, 150));
     await win.document.fonts.ready;
     win.__showhowClock?.set(0);
-    if (win.__timelines && Object.keys(win.__timelines).length) { win.__bdtl = Object.values(win.__timelines)[0]; win.__bdtl.pause(); }
+    win.__bdtl = blockTimeline(win);
   }
-  function backdrop(t, speed, which = window.BACKDROP) {
+  // `which`: a built-in name, a shader { name, src }, or a page { url } (the timeline resolves it).
+  function backdrop(t, speed, which = 'aurora') {
     const canvas = $('aurora');
-    const page = typeof which === 'object' && which && which.url;
+    const obj = typeof which === 'object' && which ? which : null;
+    const page = obj?.url;
     $('bdframe').style.visibility = page ? 'visible' : 'hidden';
     canvas.style.visibility = page ? 'hidden' : 'visible';
     if (page) {
       const win = $('bdframe').contentWindow;
-      win.__showhowClock?.set(t * speed);
-      // A block's timeline loops over the step: backdrops are ambient.
-      if (win.__bdtl) win.__bdtl.seek((t * speed) % Math.max(0.01, win.__bdtl.duration()), false);
+      // The video's own time, never scaled: a speed per card type would run the page's clock backwards.
+      win.__showhowClock?.set(t);
+      // A block's timeline loops: backdrops are ambient.
+      if (win.__bdtl) win.__bdtl.seek(t % Math.max(0.01, win.__bdtl.duration()), false);
       return;
     }
     if (!gl) {
@@ -781,8 +809,8 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     }
-    const name = typeof which === 'object' && which ? which.name : which || 'aurora';
-    const src = typeof which === 'object' && which ? which.src : BACKDROPS[name];
+    const name = obj ? obj.name : which;
+    const src = obj ? obj.src : BACKDROPS[name];
     if (!src) throw new Error(`no backdrop "${name}" (built in: ${Object.keys(BACKDROPS).join(', ')}; or { shader: file.frag })`);
     const p = program(name, src);
     gl.useProgram(p.prog);
@@ -813,13 +841,11 @@
       await injectGsap(win);
       // Build once, at t = 0: a GSAP timeline (seeked every frame after) or a draw function.
       if (typeof win.showhowTimeline === 'function') {
-        win.__tl = await win.showhowTimeline(ctx(win, sc));
+        win.__tl = await whileBuilding(win, win.showhowTimeline(ctx(win, sc)));
         if (!win.__tl || typeof win.__tl.seek !== 'function') throw new Error('scene ' + sc.src + ': showhowTimeline must return a GSAP timeline');
         win.__tl.pause();
-      } else if (typeof win.showhowScene !== 'function' && win.__timelines && Object.keys(win.__timelines).length) {
-        // A HyperFrames block: its own paused GSAP timeline, registered by composition id.
-        win.__tl = Object.values(win.__timelines)[0];
-        win.__tl.pause();
+      } else if (typeof win.showhowScene !== 'function') {
+        win.__tl = blockTimeline(win);
       }
       // Otherwise the page animates on its own (a React component, three.js, a canvas loop):
       // the virtual clock drives it.
@@ -835,6 +861,20 @@
     await win.document.fonts.ready;
   }
 
+  // A scene's build may wait on its own timers or animation frames (layout, a library's first
+  // render): run its clock while it builds, then start it at 0.
+  async function whileBuilding(win, work) {
+    let done = false;
+    const result = Promise.resolve(work).finally(() => { done = true; });
+    for (let i = 0; i < 600 && !done; i++) {
+      win.__showhowClock?.set(win.__showhowClock.time + 1 / 60);
+      await Promise.race([result.catch(() => {}), new Promise((r) => setTimeout(r, 5))]);
+    }
+    const value = await result;
+    win.__showhowClock?.set(0);
+    return value;
+  }
+
   function ctx(win, sc) {
     const k = win.showhow;
     return { t: 0, duration: sc.duration, data: sc.data, theme: k.theme, at: k.at, words: sc.words || [], gsap: win.gsap, kit: k };
@@ -846,23 +886,16 @@
   const GSAP = ['gsap', 'CustomEase', 'DrawSVGPlugin', 'MotionPathPlugin', 'MorphSVGPlugin', 'SplitText'];
   async function injectGsap(win) {
     if (win.gsap) return;
-    for (const name of GSAP) {
-      await new Promise((ok, fail) => {
-        const el = win.document.createElement('script');
-        el.src = `${window.GSAP_DIR}/${name}.min.js`;
-        el.onload = ok;
-        el.onerror = () => fail(new Error('could not load ' + name));
-        win.document.head.appendChild(el);
-      });
-    }
     // motion.dev too: its springs, inertia and sequences, made seekable by kit.motion.
-    await new Promise((ok, fail) => {
+    const srcs = [...GSAP.map((name) => `${window.GSAP_DIR}/${name}.min.js`), `${window.GSAP_DIR}/../../motion/dist/motion.js`];
+    await Promise.all(srcs.map((src) => new Promise((ok, fail) => {
       const el = win.document.createElement('script');
-      el.src = `${window.GSAP_DIR}/../../motion/dist/motion.js`;
+      el.src = src;
+      el.async = false;
       el.onload = ok;
-      el.onerror = () => fail(new Error('could not load motion'));
+      el.onerror = () => fail(new Error('could not load ' + src.split('/').pop()));
       win.document.head.appendChild(el);
-    });
+    })));
     win.gsap.registerPlugin(win.CustomEase, win.DrawSVGPlugin, win.MotionPathPlugin, win.MorphSVGPlugin, win.SplitText);
     win.gsap.ticker.lagSmoothing(0);
     // Timelines are thenables; awaiting one (an async showhowTimeline) would wait for it to finish playing.
@@ -876,6 +909,8 @@
     const theme = { ...window.APP_THEME, ...Object.fromEntries(['--bg', '--bg2', '--accent', '--text', '--on-accent', '--font', '--heading'].map((k) => [k.slice(2), css.getPropertyValue(k).trim()])), palette: window.PALETTE_EXTRA };
     for (const [k, v] of Object.entries(theme)) if (typeof v === 'string' && v) win.document.documentElement.style.setProperty('--' + k, v);
     theme.palette.forEach((c, i) => win.document.documentElement.style.setProperty(`--palette-${i + 1}`, c));
+    // Shared tones, from the theme's text colour so they read on light and dark themes alike.
+    for (const [k, pct] of [['soft', 88], ['muted', 66], ['line', 12], ['surface', 7]]) win.document.documentElement.style.setProperty(`--${k}`, `color-mix(in srgb, var(--text) ${pct}%, transparent)`);
     // The brand's fonts (theme.fonts) inside the scene too: an iframe doesn't see the stage's @font-face.
     if (window.FONTS_CSS && !win.document.getElementById('showhow-fonts')) {
       const st = win.document.createElement('style');
@@ -923,18 +958,7 @@
     // retint(el, [fromHue, toHue]): saturated colours in that hue range take the video's accent hue,
     // keeping their lightness: a lifted panel in the app's brand colour joins the video's palette.
     k.retint = (root, range = [0, 360], to = theme.accent) => {
-      const hsl = (c) => {
-        const m = c.match(/[\d.]+/g)?.map(Number);
-        if (!m || m.length < 3) return null;
-        const [r, g, b] = m.slice(0, 3).map((v) => v / 255);
-        const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
-        if (!d) return { h: 0, s: 0, l, a: m[3] ?? 1 };
-        const s2 = d / (1 - Math.abs(2 * l - 1));
-        const h = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
-        return { h: (h + 360) % 360, s: s2, l, a: m[3] ?? 1 };
-      };
-      const target = hsl(getComputedStyle(Object.assign(document.createElement('i'), { style: `color:${to}` })).color) ||
-        (() => { const el = document.body.appendChild(document.createElement('i')); el.style.color = to; const c = hsl(getComputedStyle(el).color); el.remove(); return c; })();
+      const target = hsl(resolveColor(to));
       const map = (c) => {
         const x = hsl(c);
         if (!x || x.s < 0.3 || x.h < range[0] || x.h > range[1]) return null;

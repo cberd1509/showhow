@@ -6,7 +6,9 @@ const ago = (iso) => {
   return d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
 };
 const initials = (n) => n.split(' ').map((w) => w[0]).join('');
-const avatar = (p) => `<span class="avatar" style="background:${p.color}">${initials(p.name)}</span>`;
+// Initials in dark ink on light avatar colours (sun, leaf), white on the rest.
+const light = (hex) => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 140; };
+const avatar = (p) => `<span class="avatar" style="background:${p.color};color:${light(p.color) ? 'var(--forest)' : '#fff'}">${initials(p.name)}</span>`;
 const moodChip = (p) => p.mood === 'thirsty' ? `<span class="chip thirsty">Thirsty · ${Math.round((Date.now() - new Date(p.lastWatered)) / 86400000)} days</span>` : '<span class="chip happy">Happy</span>';
 const api = (p) => fetch(p).then((r) => r.json());
 
