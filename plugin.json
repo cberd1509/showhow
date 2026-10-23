@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "showhow",
+  "version": "0.1.0",
+  "description": "Narrated tutorial videos, product trailers and written guides of any web app, made by an agent from the live app.",
+  "author": { "name": "Carlos Andres Berdugo Arias", "email": "cberd1509@gmail.com", "url": "https://github.com/cberd1509" },
+  "homepage": "https://github.com/cberd1509/showhow",
+  "repository": "https://github.com/cberd1509/showhow",
+  "license": "MIT",
+  "keywords": ["video", "tutorial", "walkthrough", "guide", "playwright", "skill"]
+}

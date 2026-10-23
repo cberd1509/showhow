@@ -1,0 +1,10 @@
+{
+  "name": "showhow",
+  "description": "Narrated tutorial videos, product trailers and written guides of any web app, made by an agent from the live app.",
+  "version": "0.1.0",
+  "author": { "name": "Carlos Andres Berdugo Arias", "email": "cberd1509@gmail.com", "url": "https://github.com/cberd1509" },
+  "license": "MIT",
+  "homepage": "https://github.com/cberd1509/showhow",
+  "repository": "https://github.com/cberd1509/showhow",
+  "keywords": ["video", "tutorial", "walkthrough", "guide", "playwright", "skill"]
+}

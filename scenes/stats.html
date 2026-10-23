@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  showhow:stats — numbers that count up to where they are. Only numbers someone can stand behind:
+  the app's own (as shown, mocked or not) or ones the person gave, with a `facts` source.
+
+  data:
+    kicker, title, highlight:   optional heading
+    items:   [{ value, prefix?, suffix?, decimals?, format?: "duration", label, sub?, cue? }]   2–4 items
+             format "duration": value in seconds, shown as m:ss
+    note:    one line under the numbers (e.g. "Last 7 days · demo data")
+    locale:  number formatting, e.g. "es-CO" (default: the browser's)
+  Labels arrive first, then each number counts to its value (never past it) on its cue.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff; font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  #root { position: absolute; inset: 0; padding: 110px 150px 0; display: flex; flex-direction: column; }
+  .kicker { align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px; font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  h1 { margin-top: 22px; font-size: 64px; line-height: 1.05; letter-spacing: -.035em; font-weight: 750; }
+  h1 .hl { background: linear-gradient(100deg, #fff 10%, color-mix(in srgb, var(--accent) 55%, #fff) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 210px; }
+  .grid { display: grid; gap: 36px; }
+  .stat { padding: 40px 40px 36px; border-radius: 26px; background: rgba(255,255,255,.055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+  .num { font-size: 120px; font-weight: 760; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .num small { font-size: .5em; letter-spacing: -.02em; color: color-mix(in srgb, var(--accent) 45%, #fff); }
+  .bar { margin: 26px 0 22px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent)); transform-origin: 0 50%; }
+  .label { font-size: 30px; font-weight: 650; letter-spacing: -.01em; }
+  .sub { margin-top: 8px; font-size: 23px; color: rgba(255,255,255,.65); }
+  .note { margin-top: 36px; font-size: 24px; color: rgba(255,255,255,.6); }
+  @media (max-aspect-ratio: 1/1) { #root { padding: 200px 80px 0; } .body { padding-bottom: 440px; } .grid { grid-template-columns: 1fr !important; gap: 28px; } .num { font-size: 130px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.showhowTimeline = ({ data, at, gsap, kit, duration }) => {
+    const hl = new Set((data.highlight || '').toLowerCase().split(/\s+/).filter(Boolean));
+    const root = document.getElementById('root');
+    root.innerHTML = `${data.kicker ? `<div class="kicker">${esc(data.kicker)}</div>` : ''}
+      ${data.title ? `<h1>${data.title.split(/(\s+)/).map((w) => hl.has(w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')) ? `<span class="hl">${esc(w)}</span>` : esc(w)).join('')}</h1>` : ''}
+      <div class="body"><div class="grid" style="grid-template-columns: repeat(${data.items.length}, 1fr)">${data.items.map((it) => `<div class="stat">
+        <div class="num">${it.prefix ? `<small>${esc(it.prefix)}</small>` : ''}<span class="v"></span>${it.suffix ? `<small>${esc(it.suffix)}</small>` : ''}</div>
+        <div class="bar"></div><div class="label">${esc(it.label)}</div>${it.sub ? `<div class="sub">${esc(it.sub)}</div>` : ''}</div>`).join('')}</div>
+      ${data.note ? `<div class="note">${esc(data.note)}</div>` : ''}</div>`;
+    const tl = gsap.timeline();
+    tl.fromTo(root, { scale: 1 }, { scale: 1.03, duration, ease: 'none', transformOrigin: '50% 40%' }, 0);
+    if (data.kicker) tl.from('.kicker', { y: 14, opacity: 0, duration: 0.6, ease: 'expo.out' }, 0.05);
+    if (data.title) tl.from('h1', { y: 26, opacity: 0, filter: 'blur(12px)', duration: 0.9, ease: 'expo.out' }, 0.15);
+    const cards = [...root.querySelectorAll('.stat')];
+    // Cards and labels first, so the eye knows what each number means before it moves.
+    tl.from(cards, { y: 40, opacity: 0, duration: 0.7, ease: 'expo.out', stagger: 0.09 }, 0.5);
+    let last = 0.9;
+    cards.forEach((card, i) => {
+      const it = data.items[i];
+      const t = it.cue ? Math.max(last, at(it.cue, last + 0.5) - 0.2) : last + (i ? 0.5 : 0.2);
+      const fmt = it.format === 'duration' ? (v) => `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, '0')}` : (v) => Number(v).toLocaleString(data.locale, { minimumFractionDigits: it.decimals ?? 0, maximumFractionDigits: it.decimals ?? 0 });
+      // Counters ease out and never pass their value.
+      tl.add(kit.count(card.querySelector('.v'), 0, it.value, { duration: 1.4, ease: 'power3.out', format: fmt }), t);
+      tl.from(card.querySelector('.bar'), { scaleX: 0, duration: 1.4, ease: 'power3.out' }, t);
+      kit.sfx(t + 1.25, 'tick', 0.25);
+      last = t + 0.35;
+    });
+    if (data.note) tl.from('.note', { opacity: 0, y: 10, duration: 0.6, ease: 'expo.out' }, last + 1.2);
+    return tl;
+  };
+</script>
+</body>
+</html>

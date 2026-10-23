@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  showhow:capabilities — "what you can do with X", in columns.
+
+  data:
+    kicker:    small label above the title
+    title:     the headline; `highlight` words get the accent gradient
+    columns:   [{ title, badge?, cue?, items: [string] }]   (1–3 columns, up to ~6 items each)
+    footer:    one line at the bottom (optional); `footerCue` lands it on a spoken word
+  Each column appears when the narration says its `cue` (falls back to a stagger).
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff;
+    font-family: var(--font, "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif); -webkit-font-smoothing: antialiased; }
+  #root { position: absolute; inset: 0; padding: 100px 150px 0; display: flex; flex-direction: column; }
+  .kicker { align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px;
+    font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .kicker:before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  h1 { margin-top: 26px; font-size: 76px; line-height: 1.04; letter-spacing: -.035em; font-weight: 750; }
+  h1 span { display: inline-block; white-space: pre; }
+  h1 span.hl { background: linear-gradient(100deg, #fff 10%, color-mix(in srgb, var(--accent) 55%, #fff) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cols { margin-top: 54px; display: grid; gap: 36px; align-items: start; }
+  .col { border-radius: 26px; padding: 34px 36px 30px; background: rgba(255,255,255,.055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); backdrop-filter: blur(8px); }
+  .col h2 { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
+  .col h2 em { font-style: normal; font-size: 18px; font-weight: 600; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px;
+    color: color-mix(in srgb, var(--accent) 35%, #fff); background: color-mix(in srgb, var(--accent) 20%, transparent); }
+  .col ul { list-style: none; margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .col li { display: flex; align-items: flex-start; gap: 16px; font-size: 27px; line-height: 1.32; color: rgba(255,255,255,.9); }
+  .col li i { flex: none; margin-top: 9px; width: 14px; height: 14px; border-radius: 5px; background: var(--accent); box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .footer { align-self: center; margin-top: 40px; padding: 16px 28px; border-radius: 16px; font-size: 27px; font-weight: 500;
+    background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  @media (max-aspect-ratio: 1/1) { #root { padding: 200px 80px 0; } .cols { grid-template-columns: 1fr !important; gap: 24px; margin-top: 40px; } h1 { font-size: 80px; } .footer { align-self: stretch; text-align: center; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  let built = false;
+  function build(data, theme) {
+    for (const [k, v] of Object.entries(theme)) document.documentElement.style.setProperty('--' + k, v);
+    const root = document.getElementById('root');
+    const hl = new Set((data.highlight || '').toLowerCase().split(/\s+/).filter(Boolean));
+    const title = (data.title || '').split(/(\s+)/).map((w) =>
+      `<span class="${hl.has(w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')) ? 'hl' : ''}">${esc(w)}</span>`).join('');
+    const cols = data.columns || [];
+    root.innerHTML = `
+      ${data.kicker ? `<div class="kicker">${esc(data.kicker)}</div>` : ''}
+      <h1>${title}</h1>
+      <div class="cols" style="grid-template-columns: repeat(${cols.length}, 1fr)">
+        ${cols.map((c) => `<section class="col"><h2>${esc(c.title)}${c.badge ? `<em>${esc(c.badge)}</em>` : ''}</h2>
+          <ul>${c.items.map((it) => `<li><i></i><span>${esc(it)}</span></li>`).join('')}</ul></section>`).join('')}
+      </div>
+      ${data.footer ? `<div class="footer">${esc(data.footer)}</div>` : ''}`;
+    built = true;
+  }
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Pure function of t: every style below comes from t and the cue times.
+  window.showhowScene = ({ t, data, theme, at }) => {
+    if (!built) build(data, theme);
+    const { spring, clamp01 } = window.showhow;
+    const show = (el, p, dy = 26, blur = 0) => {
+      el.style.opacity = clamp01(p * 1.3);
+      el.style.transform = `translateY(${(1 - p) * dy}px)`;
+      if (blur) el.style.filter = `blur(${(1 - clamp01(p)) * blur}px)`;
+    };
+    const kicker = document.querySelector('.kicker');
+    if (kicker) show(kicker, spring(t, 0.05), 16);
+    document.querySelectorAll('h1 span').forEach((w, i) => show(w, spring(t, 0.15 + i * 0.06, 110, 16), 30, 14));
+    const cols = [...document.querySelectorAll('.col')];
+    cols.forEach((col, ci) => {
+      const cue = data.columns[ci].cue;
+      const start = cue ? Math.max(0.6, at(cue, 1 + ci * 2.5) - 0.3) : 1 + ci * 2.5;
+      show(col, spring(t, start, 90, 15), 40);
+      [...col.querySelectorAll('li')].forEach((li, i) => show(li, spring(t, start + 0.35 + i * 0.22, 130, 18), 18));
+    });
+    const footer = document.querySelector('.footer');
+    if (footer) show(footer, spring(t, data.footerCue ? at(data.footerCue, 6) - 0.2 : 6, 110, 16), 20);
+  };
+</script>
+</body>
+</html>

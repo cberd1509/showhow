@@ -1,0 +1,629 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg2: #1b1f27;
+    --accent: #6d5efc;
+    --text: #ffffff;
+    --font: "Inter", -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; background: radial-gradient(120% 120% at 15% 0%, var(--bg2) 0%, var(--bg) 60%); }
+  #window {
+    position: absolute; left: 114px; top: 100px; width: 1692px; height: 952px;
+    border-radius: 14px; overflow: hidden; background: #fff;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+  }
+  #cam, #cam2, #cam3 { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #cam img, #cam2 img { position: absolute; left: 0; top: 0; display: block; }
+  #fade { opacity: 0; }
+  #ring {
+    position: absolute; border-radius: 10px; opacity: 0;
+    box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 0 9999px rgba(10,12,16,.28);
+  }
+  #ringlabel {
+    position: absolute; padding: 5px 10px; border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0;
+  }
+  #ripple { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 3px solid var(--accent); opacity: 0; }
+  #cursor { position: absolute; width: 22px; height: 22px; transform-origin: 3px 2px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+  #chip {
+    position: absolute; left: 114px; top: 28px; display: flex; align-items: center; gap: 12px;
+    padding: 10px 18px 10px 10px; border-radius: 999px; background: rgba(17,19,24,.86); color: #fff;
+    font-size: 22px; font-weight: 600; letter-spacing: -.01em; backdrop-filter: blur(8px); opacity: 0;
+  }
+  #chip b { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); font-size: 17px; }
+  #caption { z-index: 6; }
+  #scene { z-index: 4; position: absolute; inset: 0; width: 1920px; height: 1080px; border: 0; opacity: 0; background: transparent; pointer-events: none; }
+  #title { position: absolute; right: 114px; top: 38px; font-size: 22px; font-weight: 500; color: rgba(255,255,255,.55); letter-spacing: -.005em; }
+  #caption { z-index: 5;
+    position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); max-width: 1300px;
+    padding: 14px 26px; border-radius: 14px; background: rgba(12,14,18,.82); color: #fff; text-align: center;
+    font-size: 34px; line-height: 1.3; font-weight: 500; letter-spacing: -.005em; opacity: 0;
+  }
+  /* Cards: an aurora field, words that blur in, the product floating in 3D. */
+  #card { position: absolute; inset: 0; opacity: 0; color: var(--text); background: var(--bg); overflow: hidden; }
+  #aurora { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #grain { position: absolute; inset: -50%; opacity: .07; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  #card .text { position: absolute; left: 150px; top: 0; bottom: 0; width: 900px; display: flex; flex-direction: column; justify-content: center; }
+  #card.wide .text { width: 1500px; }
+  #card .kicker { display: inline-flex; align-self: flex-start; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px;
+    font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 34px;
+    color: #fff; background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  #card .kicker:before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  #card .kicker:empty { display: none; }
+  #card h1 { font-size: 96px; line-height: 1.02; letter-spacing: -.04em; font-weight: 750; }
+  #card h1 span { display: inline-block; white-space: pre; will-change: transform, filter, opacity; }
+  #card h1 span.hl { background: linear-gradient(100deg, #fff 10%, color-mix(in srgb, var(--accent) 55%, #fff) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #card p { margin-top: 30px; font-size: 34px; line-height: 1.4; color: rgba(255,255,255,.74); }
+  #card ol { margin-top: 46px; list-style: none; display: flex; flex-direction: column; gap: 20px; }
+  #card li { display: flex; align-items: center; gap: 22px; font-size: 34px; font-weight: 500; padding: 16px 24px 16px 16px; border-radius: 18px;
+    background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); backdrop-filter: blur(6px); }
+  #card li b { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 14px; background: var(--accent); font-size: 23px; }
+  #shotwrap { position: absolute; right: 64px; top: 50%; width: 860px; height: 484px; margin-top: -242px; perspective: 1800px; }
+  #shot { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; transform-origin: 30% 50%;
+    box-shadow: 0 50px 120px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.12), 0 0 140px color-mix(in srgb, var(--accent) 35%, transparent); }
+  #shot img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #shot .ring { position: absolute; border-radius: 8px; box-shadow: 0 0 0 3px var(--accent), 0 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent); }
+  #card.chapter .text { left: 0; right: 0; width: auto; align-items: center; text-align: center; }
+  #card.chapter .kicker { align-self: center; }
+  #card.chapter h1 { font-size: 120px; }
+  #card .num { font-size: 260px; font-weight: 800; letter-spacing: -.06em; line-height: .8; margin-bottom: 10px;
+    color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 70%, #fff); opacity: .9; }
+  #card .num:empty { display: none; }
+  /* Vertical (9:16): everything inside the area platform UI leaves free. */
+  .vertical #window { border-radius: 30px; }
+  .vertical #chip { top: 160px; font-size: 26px; }
+  .vertical #title { top: 172px; font-size: 24px; }
+  .vertical #caption { bottom: 300px; max-width: 940px; font-size: 40px; }
+  .vertical #card .text { left: 80px; right: 80px; width: auto !important; top: 200px; bottom: auto; height: 900px; }
+  .vertical #card.chapter .text, .vertical #card.wide .text { top: 120px; bottom: 420px; height: auto; }
+  .vertical #shotwrap { right: auto; left: 80px; top: 1130px; width: 920px; height: 518px; margin-top: 0; }
+  .vertical #card p, .vertical #card li { font-size: 38px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="window">
+    <div id="cam">
+      <img id="frame">
+    </div>
+    <div id="cam2"><img id="fade"></div>
+    <div id="cam3">
+      <div id="ring"></div>
+      <div id="ringlabel"></div>
+      <div id="ripple"></div>
+      <svg id="cursor" viewBox="0 0 22 22"><path d="M3 2 L3 18 L7.2 14.2 L10 20.4 L12.9 19.1 L10.2 13 L16 13 Z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+  <div id="chip"><b></b><span></span></div>
+  <div id="title"></div>
+  <div id="caption"></div>
+  <div id="card">
+    <canvas id="aurora" width="960" height="540"></canvas>
+    <div id="grain"></div>
+    <div id="shotwrap"><div id="shot"><img><div class="ring"></div></div></div>
+    <div class="text"><div class="num"></div><div class="kicker"></div><h1></h1><p></p><ol></ol></div>
+  </div>
+  <iframe id="scene" scrolling="no"></iframe>
+</div>
+<script src="../node_modules/motion/dist/motion.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let W = 1280, H = 720;
+  let WIN_W = 1692, WIN_H = 952;
+  // The frame: set by setup() from src/format.ts.
+  let G = { width: 1920, height: 1080, safe: { left: 60, top: 54, right: 1860, bottom: 1026 }, captionTop: 890 };
+  let VERTICAL = false;
+
+  window.setup = (opts) => {
+    W = opts.width; H = opts.height;
+    if (opts.geometry) {
+      G = opts.geometry;
+      VERTICAL = G.height > G.width;
+      document.documentElement.classList.toggle('vertical', VERTICAL);
+      for (const el of [document.documentElement, document.body, $('scene')]) { el.style.width = G.width + 'px'; el.style.height = G.height + 'px'; }
+      Object.assign($('window').style, { left: G.window.x + 'px', top: G.window.y + 'px', width: G.window.w + 'px', height: G.window.h + 'px' });
+      WIN_W = G.window.w; WIN_H = G.window.h;
+      if (VERTICAL) { $('chip').style.left = G.window.x + 'px'; $('title').style.right = G.window.x + 'px'; $('aurora').width = 540; $('aurora').height = 960; }
+    }
+    for (const img of [$('frame'), $('fade')]) { img.style.width = W + 'px'; img.style.height = H + 'px'; }
+    const r = document.documentElement.style;
+    if (opts.theme.background) r.setProperty('--bg', opts.theme.background);
+    if (opts.theme.background2) r.setProperty('--bg2', opts.theme.background2);
+    if (opts.theme.accent) r.setProperty('--accent', opts.theme.accent);
+    if (opts.theme.font) r.setProperty('--font', opts.theme.font);
+    $('title').textContent = opts.title || '';
+    window.GSAP_DIR = opts.gsapDir;
+    window.LIFT_DIR = opts.liftDir;
+    // The app's own look (from probe): colours and fonts for scenes that want it.
+    window.APP_THEME = opts.appTheme || {};
+    if (opts.fontsCss) {
+      const st = document.createElement('style');
+      st.textContent = opts.fontsCss;
+      document.head.appendChild(st);
+    }
+  };
+
+  async function load(img, src) {
+    if (!src) { img.removeAttribute('src'); return; }
+    if (img.dataset.src === src) return;
+    img.dataset.src = src;
+    img.src = src;
+    await img.decode().catch(() => {});
+  }
+
+
+  // ---- Cards -------------------------------------------------------------
+  // Every value is sampled from the card's age, never from the clock, so a
+  // frame drawn twice is drawn the same. Springs come from motion.dev.
+  const springs = new Map();
+  function spring(age, delay = 0, stiffness = 120, damping = 17) {
+    const t = age - delay;
+    if (t <= 0) return 0;
+    const key = stiffness + ':' + damping;
+    if (!springs.has(key)) springs.set(key, Motion.spring({ keyframes: [0, 1], stiffness, damping, mass: 1 }));
+    return springs.get(key).next(t * 1000).value;
+  }
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+  // The shot's resting pose; the entrance spring ends exactly here.
+  const SHOT_REST = 'translateX(0px) translateY(0px) rotateY(-17deg) rotateX(5deg) rotateZ(-1.5deg)';
+
+  // Largest size at which every word fits the column, in three lines at most.
+  let fitted = null;
+  function fitTitle(h1, width, chapter) {
+    const key = h1.textContent + '|' + width + '|' + chapter;
+    if (fitted && fitted.key === key) { h1.style.fontSize = fitted.size + 'px'; return; }
+    const sizes = chapter ? [120, 104, 92, 80, 68] : [96, 88, 80, 72, 66, 60, 54];
+    let size = sizes[sizes.length - 1];
+    for (const s of sizes) {
+      h1.style.fontSize = s + 'px';
+      const lines = Math.round(h1.getBoundingClientRect().height / (s * 1.02));
+      if (h1.scrollWidth <= h1.clientWidth + 1 && lines <= 3) { size = s; break; }
+    }
+    h1.style.fontSize = size + 'px';
+    fitted = { key, size };
+  }
+
+  // What a person would catch in a still: text under the screenshot, off the
+  // frame, or clipped; the step chip running into the title. Measured on the
+  // glyphs (a Range), not on the boxes, with transforms applied.
+  // Captions sit at the bottom of the frame; full-frame text stays above them.
+  window.layoutIssues = () => {
+    const CAPTION_TOP = G.captionTop, S = G.safe;
+    const issues = [];
+    const glyphs = (el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return [...range.getClientRects()].reduce((a, b) => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) }),
+        { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity });
+    };
+    const hit = (a, b) => a.right > b.left + 2 && a.left < b.right - 2 && a.bottom > b.top + 2 && a.top < b.bottom - 2;
+    const say = (el) => `"${el.textContent.trim().slice(0, 48)}"`;
+    const card = $('card');
+    if (Number(card.style.opacity) > 0) {
+      const shot = $('shotwrap').style.display !== 'none' ? $('shot').getBoundingClientRect() : null;
+      for (const el of card.querySelectorAll('.kicker, .num, h1, p, li')) {
+        if (!el.textContent.trim()) continue;
+        const g = glyphs(el);
+        const name = el.tagName.toLowerCase();
+        // Title-safe area, as in broadcast: ~5% in from every edge.
+        if (g.left < S.left || g.top < S.top || g.right > S.right || g.bottom > S.bottom) issues.push(`${name} leaves the safe area: ${say(el)}`);
+        if (shot && hit(g, shot)) issues.push(`${name} runs under the screenshot: ${say(el)}`);
+        if (g.bottom > CAPTION_TOP) issues.push(`${name} sits where captions go: ${say(el)}`);
+        if (el.scrollWidth > el.clientWidth + 1) issues.push(`${name} is clipped: ${say(el)}`);
+      }
+    }
+    // Inside a scene: every block of text in the safe area, unclipped, and
+    // not colliding with another block.
+    const frame = $('scene');
+    if (Number(frame.style.opacity) > 0 && frame.contentDocument) {
+      const doc = frame.contentDocument;
+      const blocks = [...doc.body.querySelectorAll('*')].filter((el) =>
+        [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) && frame.contentWindow.getComputedStyle(el).visibility !== 'hidden' && Number(frame.contentWindow.getComputedStyle(el).opacity) > 0.05);
+      // Text entirely clipped away by an overflow-hidden parent (a phone screen, a mask) isn't on screen.
+      const shown = (el, g) => {
+        for (let a = el.parentElement; a && a !== doc.body; a = a.parentElement) {
+          if (frame.contentWindow.getComputedStyle(a).overflow === 'visible') continue;
+          const r = a.getBoundingClientRect();
+          if (g.right <= r.left || g.left >= r.right || g.bottom <= r.top || g.top >= r.bottom) return false;
+        }
+        return true;
+      };
+      const boxes = blocks.map((el) => ({ el, g: glyphs(el) })).filter((b) => b.g.right > b.g.left && shown(b.el, b.g));
+      if (!boxes.length) issues.push(`scene shows nothing: no visible text in ${frame.dataset.src.split('/').pop()}`);
+      for (const { el, g } of boxes) {
+        if (g.left < S.left || g.top < S.top || g.right > S.right || g.bottom > S.bottom) issues.push(`scene text leaves the safe area: ${say(el)}`);
+        // A lift's own truncation (an ellipsis in the app) is the app's design, not a layout fault.
+        if (!el.closest('[data-lift]') && el.scrollWidth > el.clientWidth + 1 && frame.contentWindow.getComputedStyle(el).overflow !== 'visible') issues.push(`scene text is clipped: ${say(el)}`);
+        if (g.bottom > CAPTION_TOP) issues.push(`scene text sits where captions go: ${say(el)}`);
+      }
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        // A lift is the app's own layout: its text is not checked against itself.
+        const la = a.el.closest('[data-lift]'), lb = b.el.closest('[data-lift]');
+        if (la && la === lb) continue;
+        // Range boxes are the font's content area (~1.2× its size), taller than the ink: stacked display
+        // lines overlap there without touching. Allow that much, in proportion to the type.
+        const fs = Math.min(parseFloat(frame.contentWindow.getComputedStyle(a.el).fontSize), parseFloat(frame.contentWindow.getComputedStyle(b.el).fontSize));
+        const slack = Math.max(2, fs * 0.14);
+        const over = a.g.right > b.g.left + 2 && a.g.left < b.g.right - 2 && a.g.bottom > b.g.top + slack && a.g.top < b.g.bottom - slack;
+        if (over) issues.push(`scene text collides: ${say(a.el)} and ${say(b.el)}`);
+      }
+    }
+    const chip = $('chip');
+    if (Number(chip.style.opacity) > 0 && $('title').textContent && hit(chip.getBoundingClientRect(), glyphs($('title')))) issues.push(`step title runs into the video title: ${say(chip)}`);
+    return issues;
+  };
+
+  let builtTitle = null;
+  function buildTitle(h1, title, highlight) {
+    const key = title + '|' + (highlight || '');
+    if (builtTitle === key) return;
+    builtTitle = key;
+    h1.innerHTML = '';
+    const hl = new Set((highlight || '').toLowerCase().split(/\s+/).filter(Boolean));
+    title.split(/(\s+)/).forEach((w) => {
+      const span = document.createElement('span');
+      span.textContent = w;
+      if (hl.has(w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) span.className = 'hl';
+      h1.appendChild(span);
+    });
+  }
+
+  function drawCard(c, t) {
+    const card = $('card');
+    card.style.opacity = c ? String(c.alpha) : '0';
+    if (!c) return;
+    const age = c.age;
+    card.className = (c.style === 'chapter' ? 'chapter' : '') + (c.image ? '' : ' wide');
+    card.querySelector('.text').style.display = c.style === 'scene' ? 'none' : '';
+    if (c.style === 'scene') { $('shotwrap').style.display = 'none'; aurora(t, 0.8); return; }
+
+    // Lay out before animating: the text column ends where the tilted shot
+    // really begins on screen, and the title shrinks until it fits it.
+    const text = card.querySelector('.text');
+    const wrap = $('shotwrap');
+    wrap.style.display = c.image ? 'block' : 'none';
+    let column = VERTICAL ? 920 : c.style === 'chapter' ? 1620 : 1500;
+    if (c.image && !VERTICAL) {
+      $('shot').style.transform = SHOT_REST;
+      column = Math.max(560, Math.floor($('shot').getBoundingClientRect().left) - 150 - 72);
+    }
+    text.style.width = c.style === 'chapter' || VERTICAL ? '' : column + 'px';
+    if (c.image && VERTICAL) $('shot').style.transform = SHOT_REST;
+    aurora(t, c.style === 'chapter' ? 1.3 : 1);
+
+    const kicker = card.querySelector('.kicker');
+    kicker.textContent = c.kicker || '';
+    const pk = spring(age, 0.05);
+    kicker.style.opacity = clamp01(pk);
+    kicker.style.transform = `translateY(${(1 - pk) * 18}px)`;
+
+    const num = card.querySelector('.num');
+    num.textContent = c.style === 'chapter' && c.number ? String(c.number).padStart(2, '0') : '';
+    const pn = spring(age, 0, 90, 16);
+    num.style.opacity = clamp01(pn) * .9;
+    num.style.transform = `translateY(${(1 - pn) * 40}px) scale(${0.9 + 0.1 * pn})`;
+
+    const h1 = card.querySelector('h1');
+    buildTitle(h1, c.title, c.highlight);
+    fitTitle(h1, column, c.style === 'chapter');
+    const words = [...h1.children].filter((x) => x.textContent.trim());
+    words.forEach((el, i) => {
+      const p = spring(age, 0.12 + i * 0.075, 110, 16);
+      el.style.opacity = clamp01(p * 1.4);
+      el.style.filter = `blur(${(1 - clamp01(p)) * 16}px)`;
+      el.style.transform = `translateY(${(1 - p) * 34}px)`;
+    });
+    const after = 0.12 + words.length * 0.075;
+
+    const sub = card.querySelector('p');
+    sub.textContent = c.subtitle || '';
+    const ps = spring(age, after + 0.1);
+    sub.style.opacity = clamp01(ps);
+    sub.style.transform = `translateY(${(1 - ps) * 16}px)`;
+
+    const ol = card.querySelector('ol');
+    const bullets = c.bullets || [];
+    if (ol.dataset.key !== bullets.join('|')) {
+      ol.dataset.key = bullets.join('|');
+      ol.innerHTML = bullets.map(() => '<li><b></b><span></span></li>').join('');
+    }
+    [...ol.children].forEach((li, i) => {
+      li.querySelector('b').textContent = (c.start || 1) + i;
+      li.querySelector('span').textContent = bullets[i];
+      const p = spring(age, after + 0.25 + i * 0.16, 130, 18);
+      li.style.opacity = clamp01(p);
+      li.style.transform = `translateX(${(1 - p) * -40}px)`;
+    });
+
+    if (c.image) {
+      const shot = $('shot');
+      const img = shot.querySelector('img');
+      if (img.dataset.src !== c.image) { img.dataset.src = c.image; img.src = c.image; }
+      const p = spring(age, 0.2, 70, 15);
+      const float = Math.sin(age * 0.9) * 7;
+      shot.style.opacity = clamp01(p * 1.3);
+      shot.style.transform = `translateX(${(1 - p) * 220}px) translateY(${float}px) rotateY(${-17 - (1 - p) * 14}deg) rotateX(${5 + (1 - p) * 4}deg) rotateZ(${-1.5}deg)`;
+      const ring = shot.querySelector('.ring');
+      ring.style.display = c.ring ? 'block' : 'none';
+      if (c.ring) {
+        const k = 860 / W, pad = 5;
+        Object.assign(ring.style, { left: (c.ring.x * k - pad) + 'px', top: (c.ring.y * k - pad) + 'px', width: (c.ring.w * k + 2 * pad) + 'px', height: (c.ring.h * k + 2 * pad) + 'px' });
+        ring.style.opacity = clamp01(spring(age, 0.9));
+      }
+    }
+  }
+
+  // An aurora in the theme's colours: flowing fbm bands, drawn at half size.
+  let gl, prog, uT, uC;
+  function aurora(t, speed) {
+    const canvas = $('aurora');
+    if (!gl) {
+      gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false });
+      if (!gl) return;
+      const vs = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }';
+      const fs = `precision highp float;
+        uniform float t; uniform vec3 bg; uniform vec3 acc; uniform vec2 res;
+        float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
+          return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+        float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++){ v += a*n(p); p = p*2.02 + 3.1; a *= .5; } return v; }
+        void main(){
+          vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+          float w = fbm(vec2(p.x*1.4 + t*.05, t*.04));
+          float band = smoothstep(.0, .55, .32 - abs(uv.y - .38 - w*.35 + .1*sin(p.x*2.2 + t*.25)));
+          float band2 = smoothstep(.0, .5, .2 - abs(uv.y - .62 + w*.25 - .08*sin(p.x*1.6 - t*.2)));
+          vec3 a2 = mix(acc, vec3(.25, .85, .95), .45);
+          vec3 col = bg + acc * band * .55 * (.6 + .7*fbm(p*3. + t*.08)) + a2 * band2 * .32;
+          col += acc * .10 * (1. - uv.y);
+          col *= .82 + .18 * smoothstep(1.3, .2, length(uv - vec2(.35, .45)));
+          gl_FragColor = vec4(col, 1.);
+        }`;
+      const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
+      prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      uT = gl.getUniformLocation(prog, 't');
+      const css = getComputedStyle(document.documentElement);
+      const rgb = (v) => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = v.trim(); c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3).map((x) => x / 255); };
+      gl.uniform3fv(gl.getUniformLocation(prog, 'bg'), rgb(css.getPropertyValue('--bg')));
+      gl.uniform3fv(gl.getUniformLocation(prog, 'acc'), rgb(css.getPropertyValue('--accent')));
+      gl.uniform2f(gl.getUniformLocation(prog, 'res'), canvas.width, canvas.height);
+    }
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform1f(uT, t * speed);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+
+  // ---- Scenes ------------------------------------------------------------
+  // An HTML page the agent wrote for something the app has no screen for.
+  // It gets a kit (springs from motion.dev, the theme) and draws itself from t.
+  async function drawScene(sc) {
+    const frame = $('scene');
+    frame.style.opacity = sc ? String(sc.alpha) : '0';
+    if (!sc) return;
+    // One build per step: two steps can share a template with different data.
+    const key = sc.key ?? sc.src;
+    if (frame.dataset.key !== key) {
+      frame.dataset.key = key;
+      frame.dataset.src = sc.src;
+      // A distinct URL per step, so the same template always reloads fresh.
+      await new Promise((ok) => { frame.onload = ok; frame.src = `${sc.src}?step=${encodeURIComponent(key)}`; });
+      const win = frame.contentWindow;
+      win.showhow = kit(win, sc);
+      await injectGsap(win);
+      // Build once, at t = 0: a GSAP timeline (seeked every frame after) or a draw function.
+      if (typeof win.showhowTimeline === 'function') {
+        win.__tl = await win.showhowTimeline(ctx(win, sc));
+        if (!win.__tl || typeof win.__tl.seek !== 'function') throw new Error('scene ' + sc.src + ': showhowTimeline must return a GSAP timeline');
+        win.__tl.pause();
+      } else if (typeof win.showhowScene !== 'function') throw new Error('scene ' + sc.src + ' defines neither showhowTimeline nor showhowScene');
+      await win.document.fonts.ready;
+      await Promise.all([...win.document.images].map((im) => im.decode().catch(() => {})));
+    }
+    const win = frame.contentWindow;
+    win.showhow.words = sc.words || [];
+    // Callbacks on: count-ups and type-ons draw in onUpdate. Seeking is still deterministic.
+    if (win.__tl) win.__tl.seek(sc.age, false);
+    else await win.showhowScene({ ...ctx(win, sc), t: sc.age });
+    await win.document.fonts.ready;
+  }
+
+  function ctx(win, sc) {
+    const k = win.showhow;
+    return { t: 0, duration: sc.duration, data: sc.data, theme: k.theme, at: k.at, words: sc.words || [], gsap: win.gsap, kit: k };
+  }
+
+  // GSAP and its plugins, from node_modules, into the scene. The global
+  // timeline is paused: only what a scene puts on its own timeline moves,
+  // and only when the render seeks it.
+  const GSAP = ['gsap', 'CustomEase', 'DrawSVGPlugin', 'MotionPathPlugin', 'MorphSVGPlugin', 'SplitText'];
+  async function injectGsap(win) {
+    if (win.gsap) return;
+    for (const name of GSAP) {
+      await new Promise((ok, fail) => {
+        const el = win.document.createElement('script');
+        el.src = `${window.GSAP_DIR}/${name}.min.js`;
+        el.onload = ok;
+        el.onerror = () => fail(new Error('could not load ' + name));
+        win.document.head.appendChild(el);
+      });
+    }
+    win.gsap.registerPlugin(win.CustomEase, win.DrawSVGPlugin, win.MotionPathPlugin, win.MorphSVGPlugin, win.SplitText);
+    win.gsap.ticker.lagSmoothing(0);
+    // Timelines are thenables; awaiting one (an async showhowTimeline) would wait for it to finish playing.
+    delete win.gsap.core.Animation.prototype.then;
+    win.gsap.globalTimeline.pause();
+  }
+
+  // The kit a scene gets as window.showhow.
+  function kit(win, sc) {
+    const css = getComputedStyle(document.documentElement);
+    const theme = { ...window.APP_THEME, ...Object.fromEntries(['--bg', '--bg2', '--accent', '--text', '--font'].map((k) => [k.slice(2), css.getPropertyValue(k).trim()])) };
+    for (const [k, v] of Object.entries(theme)) if (typeof v === 'string' && v) win.document.documentElement.style.setProperty('--' + k, v);
+    // at('consultar'): when the narration first says it, so a beat lands on the word.
+    const norm = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const k = { spring, clamp01, theme, words: sc.words || [], sounds: [] };
+    k.at = (phrase, fallback = 0) => {
+      const target = phrase.split(/\s+/).map(norm);
+      const ws = k.words;
+      for (let i = 0; i + target.length <= ws.length; i++) if (target.every((w, j) => norm(ws[i + j].word) === w)) return ws[i].start;
+      return fallback;
+    };
+    // asset('shots/x.png'): a file the person gave, relative to the spec.
+    k.asset = (p) => new URL(p, sc.base).href;
+    // sfx(2.4, 'pop'): a sound at that scene time, mixed into the soundtrack.
+    k.sfx = (t, name, volume) => { k.sounds.push({ t, name, volume }); };
+    // lift('checklist'): a piece of the real app, captured during recording,
+    // as a detached element with its styles and fonts inlined.
+    k.lift = (name) => {
+      const xhr = new XMLHttpRequest();
+      // A name is a lift from this recording; a path ending in .html is a lift file next to the spec
+      // (e.g. one taken at another viewport).
+      xhr.open('GET', name.endsWith('.html') ? new URL(name, sc.base).href : `${window.LIFT_DIR}/${name}.html`, false);
+      try {
+        xhr.send();
+      } catch {
+        /* missing file: reported below */
+      }
+      if (xhr.status && xhr.status !== 200 || !xhr.responseText) throw new Error(`no lift named "${name}": add { lift: …, as: ${name} } to a step and record again`);
+      const tpl = win.document.createElement('template');
+      tpl.innerHTML = xhr.responseText;
+      const root = tpl.content.querySelector('[data-lift]');
+      for (const style of tpl.content.querySelectorAll('style')) win.document.head.appendChild(style);
+      return root;
+    };
+    // await kit.ready() before measuring layout: fonts (a lift brings its own) and images loaded.
+    k.ready = async () => {
+      await win.document.fonts.ready;
+      await Promise.all([...win.document.images].map((im) => im.decode().catch(() => {})));
+    };
+    // retint(el, [fromHue, toHue]): saturated colours in that hue range take the video's accent hue,
+    // keeping their lightness: a lifted panel in the app's brand colour joins the video's palette.
+    k.retint = (root, range = [0, 360], to = theme.accent) => {
+      const hsl = (c) => {
+        const m = c.match(/[\d.]+/g)?.map(Number);
+        if (!m || m.length < 3) return null;
+        const [r, g, b] = m.slice(0, 3).map((v) => v / 255);
+        const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+        if (!d) return { h: 0, s: 0, l, a: m[3] ?? 1 };
+        const s2 = d / (1 - Math.abs(2 * l - 1));
+        const h = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+        return { h: (h + 360) % 360, s: s2, l, a: m[3] ?? 1 };
+      };
+      const target = hsl(getComputedStyle(Object.assign(document.createElement('i'), { style: `color:${to}` })).color) ||
+        (() => { const el = document.body.appendChild(document.createElement('i')); el.style.color = to; const c = hsl(getComputedStyle(el).color); el.remove(); return c; })();
+      const map = (c) => {
+        const x = hsl(c);
+        if (!x || x.s < 0.3 || x.h < range[0] || x.h > range[1]) return null;
+        return `hsla(${target.h.toFixed(0)}, ${(Math.min(1, target.s) * 100).toFixed(0)}%, ${(x.l * 100).toFixed(0)}%, ${x.a})`;
+      };
+      for (const el of [root, ...root.querySelectorAll('*')]) {
+        const cs = win.getComputedStyle(el);
+        for (const prop of ['color', 'background-color', 'fill', 'stroke', 'border-top-color', 'border-bottom-color', 'border-left-color', 'border-right-color']) {
+          const v = map(cs.getPropertyValue(prop));
+          if (v) el.style.setProperty(prop, v);
+        }
+      }
+    };
+    // Shared helpers, all safe to put on a seeked timeline.
+    k.count = (el, from, to, opts = {}) => {
+      const o = { v: from };
+      const fmt = opts.format || ((v) => Math.round(v).toLocaleString(opts.locale));
+      el.textContent = fmt(from);
+      return win.gsap.to(o, { v: to, duration: opts.duration ?? 1.2, ease: opts.ease ?? 'power2.out', onUpdate: () => { el.textContent = fmt(o.v); } });
+    };
+    k.typeOn = (el, text, opts = {}) => {
+      const o = { n: 0 };
+      el.textContent = '';
+      const cps = opts.cps ?? 28;
+      return win.gsap.to(o, { n: text.length, duration: text.length / cps, ease: 'none', onUpdate: () => { el.textContent = text.slice(0, Math.round(o.n)); } });
+    };
+    return k;
+  }
+
+  // The sounds a scene schedules (scene time), for the mix.
+  window.sceneSounds = async (sc) => {
+    $('scene').dataset.key = '';
+    await drawScene({ ...sc, alpha: 0 });
+    return $('scene').contentWindow.showhow.sounds;
+  };
+
+  // Draws one moment. Everything comes in `s`; nothing depends on the clock.
+  window.draw = async (s) => {
+    await Promise.all([load($('frame'), s.frame), load($('fade'), s.fadeFrom)]);
+    $('fade').style.opacity = s.fadeFrom ? String(s.fadeAlpha) : '0';
+
+    // The page covers the window (a portrait window crops it; the camera chooses what it shows).
+    const k = Math.max(WIN_W / W, WIN_H / H);
+    const cam = s.camera;
+    const tx = WIN_W / 2 - cam.cx * k * cam.scale;
+    const ty = WIN_H / 2 - cam.cy * k * cam.scale;
+    $('cam').style.transform = `translate(${tx}px, ${ty}px) scale(${k * cam.scale})`;
+    // Overlays (ring, cursor) ride the live camera, above the dissolve.
+    $('cam3').style.transform = $('cam').style.transform;
+    // The outgoing frame of a dissolve keeps its own framing.
+    const fc = s.fadeCamera || cam;
+    $('cam2').style.transform = `translate(${WIN_W / 2 - fc.cx * k * fc.scale}px, ${WIN_H / 2 - fc.cy * k * fc.scale}px) scale(${k * fc.scale})`;
+
+    const cur = $('cursor');
+    cur.style.display = s.cursor ? 'block' : 'none';
+    if (s.cursor) {
+      const size = 1 / Math.sqrt(cam.scale);
+      cur.style.left = (s.cursor.x - 3) + 'px';
+      cur.style.top = (s.cursor.y - 2) + 'px';
+      cur.style.transform = `scale(${size * (s.cursor.down ? 0.85 : 1)})`;
+    }
+    const rip = $('ripple');
+    if (s.ripple) {
+      rip.style.left = s.ripple.x + 'px'; rip.style.top = s.ripple.y + 'px';
+      rip.style.opacity = String(1 - s.ripple.p);
+      rip.style.transform = `scale(${0.4 + s.ripple.p * 1.1})`;
+    } else rip.style.opacity = '0';
+
+    const ring = $('ring'), label = $('ringlabel');
+    if (s.ring) {
+      const pad = 6;
+      Object.assign(ring.style, { left: s.ring.x - pad + 'px', top: s.ring.y - pad + 'px', width: s.ring.w + 2 * pad + 'px', height: s.ring.h + 2 * pad + 'px', opacity: String(s.ring.alpha) });
+      label.style.opacity = s.ring.label ? String(s.ring.alpha) : '0';
+      if (s.ring.label) {
+        label.textContent = s.ring.label;
+        const above = s.ring.y > 60;
+        label.style.left = s.ring.x - pad + 'px';
+        label.style.top = (above ? s.ring.y - pad - 38 : s.ring.y + s.ring.h + pad + 10) + 'px';
+      }
+    } else { ring.style.opacity = '0'; label.style.opacity = '0'; }
+
+    const chip = $('chip');
+    chip.style.opacity = s.chip ? String(s.chip.alpha) : '0';
+    if (s.chip) { chip.querySelector('b').textContent = s.chip.n; chip.querySelector('span').textContent = s.chip.title; }
+
+    const cap = $('caption');
+    cap.style.opacity = s.caption ? '1' : '0';
+    if (s.caption) cap.textContent = s.caption;
+
+    // A scene sits on the card's aurora: draw that bare, then the scene over it.
+    drawCard(s.card || (s.scene && { style: 'scene', title: '', alpha: s.scene.alpha, age: s.scene.age }), s.t ?? 0);
+    await drawScene(s.scene);
+  };
+</script>
+</body>
+</html>

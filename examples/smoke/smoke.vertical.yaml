@@ -1,0 +1,3 @@
+# The smoke test as a 9:16 vertical cut: same steps and narration.
+extends: smoke.yaml
+format: vertical

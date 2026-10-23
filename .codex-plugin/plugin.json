@@ -1,0 +1,25 @@
+{
+  "name": "showhow",
+  "version": "0.1.0",
+  "description": "Narrated tutorial videos, product trailers and written guides of any web app, made by an agent from the live app.",
+  "author": { "name": "Carlos Andres Berdugo Arias", "email": "cberd1509@gmail.com", "url": "https://github.com/cberd1509" },
+  "homepage": "https://github.com/cberd1509/showhow",
+  "repository": "https://github.com/cberd1509/showhow",
+  "license": "MIT",
+  "keywords": ["video", "tutorial", "walkthrough", "guide", "playwright", "skill"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "showhow",
+    "shortDescription": "Narrated videos and guides of any web app.",
+    "longDescription": "Explore a web app in a real browser, mock private data, script and narrate a walkthrough, and render a captioned video with chapters, motion graphics and a written guide with screenshots. Tutorials, deep-dive guides, marketing videos and executive trailers, landscape or vertical.",
+    "developerName": "Carlos Andres Berdugo Arias",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Execute"],
+    "websiteURL": "https://github.com/cberd1509/showhow",
+    "defaultPrompt": [
+      "Make a tutorial of how to invite a teammate in this app.",
+      "Explain how this feature works, as a video and a guide.",
+      "Make a 45-second vertical promo of this product."
+    ]
+  }
+}

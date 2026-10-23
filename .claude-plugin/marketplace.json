@@ -1,0 +1,8 @@
+{
+  "name": "showhow",
+  "description": "Show how your app works: narrated videos and guides from the live app.",
+  "owner": { "name": "Carlos Andres Berdugo Arias", "email": "cberd1509@gmail.com", "url": "https://github.com/cberd1509" },
+  "plugins": [
+    { "name": "showhow", "source": "./", "description": "Narrated tutorial videos, product trailers and written guides of any web app, made by an agent from the live app." }
+  ]
+}

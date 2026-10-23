@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  showhow:kinetic — big type that carries one idea: an opening hook, a section's thesis, a closing line.
+
+  data:
+    kicker:  small label (optional)
+    lines:   [{ text, accent?: true, cue?, size? }]   each line lands when the narration says its cue
+    sweep:   a word to underline with a highlight sweep once everything has landed (optional)
+    align:   "left" (default) | "center"
+  Words rise and un-blur one by one; then the whole block keeps a slow push.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff; font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  #block { position: absolute; left: 160px; right: 160px; top: 50%; transform-origin: 0 50%; }
+  #block.center { text-align: center; transform-origin: 50% 50%; }
+  .kicker { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 9px 18px; border-radius: 999px; font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .line { display: block; font-weight: 760; letter-spacing: -.04em; line-height: 1.14; }
+  .line .w { display: inline-block; white-space: pre; }
+  .line.accent .w { background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 40%, #fff), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sweep { position: relative; }
+  .sweep i { position: absolute; left: -4px; right: -4px; bottom: .06em; height: .2em; border-radius: 4px; background: var(--accent); opacity: .55; transform-origin: 0 50%; z-index: -1; }
+  @media (max-aspect-ratio: 1/1) { #block { left: 80px; right: 80px; } }
+</style>
+</head>
+<body>
+<div id="block"></div>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.showhowTimeline = ({ data, at, gsap, kit, duration }) => {
+    const block = document.getElementById('block');
+    if (data.align === 'center') block.classList.add('center');
+    const norm = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    block.innerHTML = `${data.kicker ? `<div class="kicker">${esc(data.kicker)}</div>` : ''}` + data.lines.map((l) =>
+      `<span class="line${l.accent ? ' accent' : ''}" style="font-size:${l.size ?? (data.lines.length > 3 ? 84 : 112)}px">${l.text.split(/(\s+)/).map((w) =>
+        w.trim() ? `<span class="w${data.sweep && norm(w) === norm(data.sweep) ? ' sweep' : ''}">${esc(w)}${data.sweep && norm(w) === norm(data.sweep) ? '<i></i>' : ''}</span>` : w).join('')}</span>`).join('');
+    block.style.marginTop = `${-block.offsetHeight / 2}px`;
+
+    const tl = gsap.timeline();
+    tl.fromTo(block, { scale: 1 }, { scale: 1.035, duration, ease: 'none' }, 0);
+    if (data.kicker) tl.from('.kicker', { y: 14, opacity: 0, duration: 0.6, ease: 'expo.out' }, 0.05);
+    let last = 0.2;
+    [...block.querySelectorAll('.line')].forEach((line, i) => {
+      const cue = data.lines[i].cue;
+      const t = cue ? Math.max(last + 0.15, at(cue, last + 0.7) - 0.2) : (i ? last + 0.7 : 0.25);
+      tl.from(line.querySelectorAll('.w'), { yPercent: 60, opacity: 0, filter: 'blur(14px)', duration: 0.8, ease: 'expo.out', stagger: 0.07 }, t);
+      kit.sfx(t, data.lines[i].accent ? 'reveal' : 'slide', data.lines[i].accent ? 0.28 : 0.15);
+      last = t + 0.07 * line.querySelectorAll('.w').length;
+    });
+    const sw = block.querySelector('.sweep i');
+    if (sw) tl.from(sw, { scaleX: 0, duration: 0.7, ease: 'power3.inOut' }, last + 0.5);
+    return tl;
+  };
+</script>
+</body>
+</html>

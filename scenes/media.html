@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  showhow:media — a screen or clip the person supplied, framed in the theme.
+
+  data:
+    src:      image or video, as a path relative to the spec or a URL
+    kicker:   small label (optional)
+    title:    one line above the media (optional)
+    caption:  one line under it (optional)
+    push:     how far the slow push-in goes, 0–0.1 (default 0.04); ignored with `focus`
+    blur:     [{ x, y, w, h }] regions to blur (private data), as fractions of the image
+    focus:    { x, y, w, h, label?, cue? } a region to zoom into and ring, as fractions;
+              lands when the narration says `cue` (else at 2 s)
+  Videos are seeked to t on every frame, so they stay in sync with the render.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff;
+    font-family: var(--font, "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif); -webkit-font-smoothing: antialiased; }
+  #root { position: absolute; inset: 0; padding: 70px 150px 0; display: flex; flex-direction: column; align-items: center; }
+  .kicker { display: inline-flex; align-items: center; gap: 12px; padding: 8px 16px; border-radius: 999px; font-size: 20px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; background: color-mix(in srgb, var(--accent) 22%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  h1 { margin-top: 18px; font-size: 52px; letter-spacing: -.03em; font-weight: 700; text-align: center; }
+  .frame { position: relative; margin-top: 26px; width: 1080px; height: 608px; border-radius: 20px; overflow: hidden; background: #000;
+    box-shadow: 0 40px 100px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.12), 0 0 120px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .frame img, .frame video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 40%; }
+  .frame .stack img, .frame .stack video { transform: none; }
+  .stack { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
+  .stack > .blur { position: absolute; backdrop-filter: blur(18px); background: rgba(128,128,128,.15); border-radius: 6px; }
+  .ring { position: absolute; border-radius: 12px; box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 40px color-mix(in srgb, var(--accent) 60%, transparent); opacity: 0; }
+  .tag { position: absolute; padding: 8px 14px; border-radius: 10px; font-size: 22px; font-weight: 600; white-space: nowrap; background: var(--accent); color: #fff; opacity: 0; }
+  p { margin-top: 20px; font-size: 26px; color: rgba(255,255,255,.78); text-align: center; }
+  @media (max-aspect-ratio: 1/1) { #root { padding: 220px 80px 0; } .frame { width: 920px; height: 1100px; } h1 { font-size: 64px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  let media = null;
+  const box = (r) => `left:${r.x * 100}%;top:${r.y * 100}%;width:${r.w * 100}%;height:${r.h * 100}%`;
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  async function build(data, theme) {
+    for (const [k, v] of Object.entries(theme)) document.documentElement.style.setProperty('--' + k, v);
+    const src = window.showhow.asset(data.src);
+    const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(src);
+    document.getElementById('root').innerHTML = `
+      ${data.kicker ? `<div class="kicker">${esc(data.kicker)}</div>` : ''}
+      ${data.title ? `<h1>${esc(data.title)}</h1>` : ''}
+      <div class="frame"><div class="stack">${isVideo ? `<video muted playsinline preload="auto" src="${esc(src)}"></video>` : `<img src="${esc(src)}">`}
+        ${(data.blur || []).map((r) => `<div class="blur" style="${box(r)}"></div>`).join('')}
+        </div>
+        ${data.focus ? '<div class="ring"></div>' : ''}
+        ${data.focus?.label ? `<div class="tag">${esc(data.focus.label)}</div>` : ''}</div>
+      ${data.caption ? `<p>${esc(data.caption)}</p>` : ''}`;
+    media = document.querySelector('.stack > img, .stack > video');
+    if (isVideo) await new Promise((ok) => (media.readyState >= 2 ? ok() : media.addEventListener('loadeddata', ok, { once: true })));
+    else await media.decode().catch(() => {});
+  }
+  window.showhowScene = async ({ t, duration, data, theme }) => {
+    if (!media) await build(data, theme);
+    const { spring, clamp01 } = window.showhow;
+    const p = spring(t, 0.1, 80, 16);
+    const frame = document.querySelector('.frame');
+    frame.style.opacity = clamp01(p * 1.3);
+    frame.style.transform = `translateY(${(1 - p) * 50}px) scale(${0.96 + 0.04 * p})`;
+    const stack = document.querySelector('.stack');
+    if (data.focus) {
+      // Zoom so the region fills ~60% of the frame, centred, like the camera on recorded steps.
+      const f = data.focus, at = window.showhow.at;
+      const z = spring(t, f.cue ? at(f.cue, 2) - 0.2 : 2, 60, 18);
+      const k = 1 + (Math.min(2.4, 0.6 / Math.max(f.w, f.h)) - 1) * z;
+      const cx = f.x + f.w / 2, cy = f.y + f.h / 2;
+      const W = stack.clientWidth, H = stack.clientHeight;
+      const tx = Math.min(0, Math.max(W - W * k, W / 2 - cx * W * k)), ty = Math.min(0, Math.max(H - H * k, H / 2 - cy * H * k));
+      stack.style.transform = `translate(${tx * z}px, ${ty * z}px) scale(${k})`;
+      // The ring lives outside the zoomed layer, so its stroke stays the same width.
+      const ring = document.querySelector('.ring');
+      const pad = 8;
+      Object.assign(ring.style, { left: `${f.x * W * k + tx * z - pad}px`, top: `${f.y * H * k + ty * z - pad}px`, width: `${f.w * W * k + pad * 2}px`, height: `${f.h * H * k + pad * 2}px` });
+      ring.style.opacity = clamp01((z - 0.6) * 2.5);
+      const tag = document.querySelector('.tag');
+      if (tag) {
+        const r = ring.getBoundingClientRect(), fr = document.querySelector('.frame').getBoundingClientRect();
+        tag.style.opacity = ring.style.opacity;
+        tag.style.left = `${Math.min(fr.width - tag.offsetWidth - 16, Math.max(16, r.left - fr.left))}px`;
+        tag.style.top = `${r.bottom - fr.top + 14 + tag.offsetHeight > fr.height ? r.top - fr.top - tag.offsetHeight - 14 : r.bottom - fr.top + 14}px`;
+      }
+    } else media.style.transform = `scale(${1 + (data.push ?? 0.04) * (t / Math.max(duration, 1))})`;
+    for (const el of document.querySelectorAll('.kicker, h1, p')) { const q = spring(t, 0.3); el.style.opacity = clamp01(q); el.style.transform = `translateY(${(1 - q) * 16}px)`; }
+    if (media.tagName === 'VIDEO') {
+      const target = Math.min(t, (media.duration || t) - 0.05);
+      if (Math.abs(media.currentTime - target) > 0.001) {
+        media.currentTime = target;
+        await new Promise((ok) => media.addEventListener('seeked', ok, { once: true }));
+      }
+    }
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{
+  "name": "showhow",
+  "version": "0.1.0",
+  "description": "Narrated tutorial videos, product trailers and written guides of any web app, made by an agent from the live app.",
+  "keywords": [
+    "video",
+    "tutorial",
+    "walkthrough",
+    "screen-recording",
+    "guide",
+    "playwright",
+    "agent",
+    "skill",
+    "claude-code"
+  ],
+  "homepage": "https://github.com/cberd1509/showhow",
+  "bugs": {
+    "url": "https://github.com/cberd1509/showhow/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cberd1509/showhow.git"
+  },
+  "license": "MIT",
+  "author": "Carlos Andres Berdugo Arias <cberd1509@gmail.com> (https://github.com/cberd1509)",
+  "type": "module",
+  "bin": {
+    "showhow": "bin/showhow.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "scenes",
+    "assets",
+    "skills",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "showhow": "node bin/showhow.js",
+    "check": "tsc -p ."
+  },
+  "dependencies": {
+    "gsap": "^3.13.0",
+    "motion": "^14.6.0",
+    "playwright": "^1.64.1",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3"
+  }
+}
