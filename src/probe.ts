@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { activePage, applyPrivacy, launch } from './browser.ts';
+import { withServer } from './serve.ts';
 import { loadSpec } from './spec.ts';
 import { outputDir } from './paths.ts';
 import { Runner } from './runner.ts';
@@ -15,6 +16,11 @@ import { readBrand, readFonts } from './lift.ts';
  * recording will.
  */
 export async function probe(file: string, opts: { after?: string; url?: string; out?: string; headed?: boolean }) {
+  const { spec, dir } = loadSpec(file);
+  return withServer(spec, dir, () => probeNow(file, opts));
+}
+
+async function probeNow(file: string, opts: { after?: string; url?: string; out?: string; headed?: boolean }) {
   const { spec, dir } = loadSpec(file);
   const out = opts.out ? path.resolve(opts.out) : path.join(outputDir(file), 'probe');
   mkdirSync(out, { recursive: true });
@@ -59,7 +65,8 @@ export async function probe(file: string, opts: { after?: string; url?: string; 
       const steps = opts.after ? spec.steps.slice(0, last + 1) : [];
       if (!steps.length) await runner.page.goto(spec.app, { waitUntil: 'domcontentloaded' });
       for (const step of steps) {
-        if (step.card || step.scene) continue;
+        // A card or scene with actions still runs them (record does): a sign-in behind the intro, lifts for a scene.
+        if ((step.card || step.scene) && !step.do?.length) continue;
         process.stdout.write(`probe: ${step.id}\n`);
         await runner.runStep(step);
       }

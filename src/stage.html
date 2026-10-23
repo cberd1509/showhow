@@ -9,6 +9,8 @@
     --accent: #6d5efc;
     --text: #ffffff;
     --font: "Inter", -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    --heading: var(--font);
+    --on-accent: #ffffff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); font-family: var(--font); -webkit-font-smoothing: antialiased; }
@@ -39,7 +41,7 @@
   #chip b { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); font-size: 17px; }
   #caption { z-index: 6; }
   #scene { z-index: 4; position: absolute; inset: 0; width: 1920px; height: 1080px; border: 0; opacity: 0; background: transparent; pointer-events: none; }
-  #title { position: absolute; right: 114px; top: 38px; font-size: 22px; font-weight: 500; color: rgba(255,255,255,.55); letter-spacing: -.005em; }
+  #title { position: absolute; right: 114px; top: 38px; font-size: 22px; font-weight: 500; color: color-mix(in srgb, var(--text) 55%, transparent); letter-spacing: -.005em; }
   #caption { z-index: 5;
     position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); max-width: 1300px;
     padding: 14px 26px; border-radius: 14px; background: rgba(12,14,18,.82); color: #fff; text-align: center;
@@ -54,16 +56,16 @@
   #card.wide .text { width: 1500px; }
   #card .kicker { display: inline-flex; align-self: flex-start; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px;
     font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 34px;
-    color: #fff; background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+    color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
   #card .kicker:before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
   #card .kicker:empty { display: none; }
-  #card h1 { font-size: 96px; line-height: 1.02; letter-spacing: -.04em; font-weight: 750; }
+  #card h1 { font-family: var(--heading); font-size: 96px; line-height: 1.02; letter-spacing: -.04em; font-weight: 750; }
   #card h1 span { display: inline-block; white-space: pre; will-change: transform, filter, opacity; }
-  #card h1 span.hl { background: linear-gradient(100deg, #fff 10%, color-mix(in srgb, var(--accent) 55%, #fff) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  #card p { margin-top: 30px; font-size: 34px; line-height: 1.4; color: rgba(255,255,255,.74); }
+  #card h1 span.hl { background: linear-gradient(100deg, var(--text) 10%, color-mix(in srgb, var(--accent) 55%, var(--text)) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #card p { margin-top: 30px; font-size: 34px; line-height: 1.4; color: color-mix(in srgb, var(--text) 74%, transparent); }
   #card ol { margin-top: 46px; list-style: none; display: flex; flex-direction: column; gap: 20px; }
   #card li { display: flex; align-items: center; gap: 22px; font-size: 34px; font-weight: 500; padding: 16px 24px 16px 16px; border-radius: 18px;
-    background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); backdrop-filter: blur(6px); }
+    background: color-mix(in srgb, var(--text) 6%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 9%, transparent); backdrop-filter: blur(6px); }
   #card li b { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 14px; background: var(--accent); font-size: 23px; }
   #shotwrap { position: absolute; right: 64px; top: 50%; width: 860px; height: 484px; margin-top: -242px; perspective: 1800px; }
   #shot { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; transform-origin: 30% 50%;
@@ -74,7 +76,7 @@
   #card.chapter .kicker { align-self: center; }
   #card.chapter h1 { font-size: 120px; }
   #card .num { font-size: 260px; font-weight: 800; letter-spacing: -.06em; line-height: .8; margin-bottom: 10px;
-    color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 70%, #fff); opacity: .9; }
+    color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 70%, var(--text)); opacity: .9; }
   #card .num:empty { display: none; }
   /* Vertical (9:16): everything inside the area platform UI leaves free. */
   .vertical #window { border-radius: 30px; }
@@ -106,6 +108,7 @@
   <div id="caption"></div>
   <div id="card">
     <canvas id="aurora" width="960" height="540"></canvas>
+    <iframe id="bdframe" style="position:absolute;inset:0;width:100%;height:100%;border:0;visibility:hidden;pointer-events:none"></iframe>
     <div id="grain"></div>
     <div id="shotwrap"><div id="shot"><img><div class="ring"></div></div></div>
     <div class="text"><div class="num"></div><div class="kicker"></div><h1></h1><p></p><ol></ol></div>
@@ -138,6 +141,14 @@
     if (opts.theme.background2) r.setProperty('--bg2', opts.theme.background2);
     if (opts.theme.accent) r.setProperty('--accent', opts.theme.accent);
     if (opts.theme.font) r.setProperty('--font', opts.theme.font);
+    if (opts.theme.headingFont) r.setProperty('--heading', opts.theme.headingFont);
+    window.PALETTE_EXTRA = opts.theme.palette || [];
+    window.PALETTE = [opts.theme.background, opts.theme.background2, opts.theme.accent, opts.theme.text, ...window.PALETTE_EXTRA].filter(Boolean);
+    window.FONTS_CSS = opts.fontsCss || '';
+    // The default backdrop (theme.backdrop); a step can choose another.
+    window.BACKDROP = opts.backdrop || 'aurora';
+    if (opts.theme.text) r.setProperty('--text', opts.theme.text);
+    if (opts.theme.onAccent) r.setProperty('--on-accent', opts.theme.onAccent);
     $('title').textContent = opts.title || '';
     window.GSAP_DIR = opts.gsapDir;
     window.LIFT_DIR = opts.liftDir;
@@ -195,6 +206,55 @@
   // frame, or clipped; the step chip running into the title. Measured on the
   // glyphs (a Range), not on the boxes, with transforms applied.
   // Captions sit at the bottom of the frame; full-frame text stays above them.
+  // Colours outside the brand palette: saturated colours (text, fills, strokes, borders) in a scene or
+  // card whose hue is far from every palette colour. A lifted panel in the app's own colour inside a
+  // video that wears another brand is the usual case; `retint` fixes it. Warnings, not failures.
+  window.paletteIssues = () => {
+    const hsl = (c) => {
+      const m = c && c.match(/[\d.]+/g)?.map(Number);
+      if (!m || m.length < 3 || (m.length > 3 && m[3] < 0.2)) return null;
+      const [r, g, b] = m.slice(0, 3).map((v) => v / 255);
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+      if (!d) return { h: 0, s: 0, l };
+      const s = d / (1 - Math.abs(2 * l - 1));
+      const h = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+      return { h: (h + 360) % 360, s, l };
+    };
+    const probe = document.createElement('i');
+    document.body.appendChild(probe);
+    const brand = (window.PALETTE || []).map((c) => { probe.style.color = c; return hsl(getComputedStyle(probe).color); }).filter((x) => x && x.s >= 0.2);
+    probe.remove();
+    if (!brand.length) return [];
+    const loud = (x) => x && x.s >= 0.45 && x.l > 0.18 && x.l < 0.85;
+    const off = (x) => brand.every((b) => Math.min(Math.abs(x.h - b.h), 360 - Math.abs(x.h - b.h)) > 26);
+    const seen = new Map();
+    const look = (doc, win, where) => {
+      for (const el of doc.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2 || el.closest('[aria-hidden=true]')) continue;
+        const cs = win.getComputedStyle(el);
+        if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+        for (const prop of ['color', 'background-color', 'fill', 'stroke', 'border-top-color']) {
+          if (prop === 'color' && !el.childNodes.length) continue;
+          if (prop === 'border-top-color' && parseFloat(cs.borderTopWidth) < 1) continue;
+          const v = cs.getPropertyValue(prop);
+          const x = hsl(v);
+          if (!loud(x) || !off(x)) continue;
+          const key = `${where}|${v}`;
+          const e = seen.get(key) || { where, v, n: 0, text: '' };
+          e.n++;
+          e.text ||= (el.textContent || '').trim().slice(0, 30);
+          seen.set(key, e);
+        }
+      }
+    };
+    const frame = $('scene');
+    if (+frame.style.opacity > 0 && frame.contentDocument) look(frame.contentDocument, frame.contentWindow, 'scene');
+    if (+$('card').style.opacity > 0) look(document, window, 'card');
+    return [...seen.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 4)
+      .map((e) => `${e.where} uses ${e.v} (${e.n} elements${e.text ? `, e.g. "${e.text}"` : ''}), outside the palette: retint it or add it to theme.palette`);
+  };
+
   window.layoutIssues = () => {
     const CAPTION_TOP = G.captionTop, S = G.safe;
     const issues = [];
@@ -225,8 +285,14 @@
     const frame = $('scene');
     if (Number(frame.style.opacity) > 0 && frame.contentDocument) {
       const doc = frame.contentDocument;
+      // Seen: not hidden, and not faded out by itself or anything around it (a crossfade's old layer).
+      const seen = (el) => {
+        let o = 1;
+        for (let a = el; a && a !== doc.body; a = a.parentElement) o *= Number(frame.contentWindow.getComputedStyle(a).opacity);
+        return o > 0.05;
+      };
       const blocks = [...doc.body.querySelectorAll('*')].filter((el) =>
-        [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) && frame.contentWindow.getComputedStyle(el).visibility !== 'hidden' && Number(frame.contentWindow.getComputedStyle(el).opacity) > 0.05);
+        [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim()) && frame.contentWindow.getComputedStyle(el).visibility !== 'hidden' && seen(el));
       // Text entirely clipped away by an overflow-hidden parent (a phone screen, a mask) isn't on screen.
       const shown = (el, g) => {
         for (let a = el.parentElement; a && a !== doc.body; a = a.parentElement) {
@@ -285,7 +351,7 @@
     const age = c.age;
     card.className = (c.style === 'chapter' ? 'chapter' : '') + (c.image ? '' : ' wide');
     card.querySelector('.text').style.display = c.style === 'scene' ? 'none' : '';
-    if (c.style === 'scene') { $('shotwrap').style.display = 'none'; aurora(t, 0.8); return; }
+    if (c.style === 'scene') { $('shotwrap').style.display = 'none'; backdrop(t, 0.8, c.backdrop); return; }
 
     // Lay out before animating: the text column ends where the tilted shot
     // really begins on screen, and the title shrinks until it fits it.
@@ -299,7 +365,7 @@
     }
     text.style.width = c.style === 'chapter' || VERTICAL ? '' : column + 'px';
     if (c.image && VERTICAL) $('shot').style.transform = SHOT_REST;
-    aurora(t, c.style === 'chapter' ? 1.3 : 1);
+    backdrop(t, c.style === 'chapter' ? 1.3 : 1, c.backdrop);
 
     const kicker = card.querySelector('.kicker');
     kicker.textContent = c.kicker || '';
@@ -363,52 +429,324 @@
     }
   }
 
-  // An aurora in the theme's colours: flowing fbm bands, drawn at half size.
-  let gl, prog, uT, uC;
-  function aurora(t, speed) {
+  // ---- Backdrops ---------------------------------------------------------
+  // The field behind cards and scenes: a fragment shader in the theme's colours, drawn at half size.
+  // Built-ins below; `{ shader: file.frag }` brings a brand's own. Every shader gets the same uniforms:
+  // t (seconds), res, bg, bg2, acc, c1–c4 (theme.palette), as vec3 colours.
+  const GLSL_LIB = `precision highp float;
+    uniform float t; uniform vec2 res; uniform vec3 bg; uniform vec3 bg2; uniform vec3 acc; uniform vec3 c1; uniform vec3 c2; uniform vec3 c3; uniform vec3 c4;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
+      return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+    float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++){ v += a*n(p); p = p*2.02 + 3.1; a *= .5; } return v; }
+  `;
+  const BACKDROPS = {
+    // Flowing bands of the accent over the background: the original look.
+    aurora: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      float w = fbm(vec2(p.x*1.4 + t*.05, t*.04));
+      float band = smoothstep(.0, .55, .32 - abs(uv.y - .38 - w*.35 + .1*sin(p.x*2.2 + t*.25)));
+      float band2 = smoothstep(.0, .5, .2 - abs(uv.y - .62 + w*.25 - .08*sin(p.x*1.6 - t*.2)));
+      vec3 a2 = mix(acc, c1, .45);
+      vec3 col = bg + acc * band * .55 * (.6 + .7*fbm(p*3. + t*.08)) + a2 * band2 * .32;
+      col += acc * .10 * (1. - uv.y);
+      col *= .82 + .18 * smoothstep(1.3, .2, length(uv - vec2(.35, .45)));
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // A mesh gradient: four soft colour fields drifting over each other (bg2, accent, palette).
+    mesh: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      vec2 q = p + .18 * vec2(fbm(p*1.3 + t*.06), fbm(p*1.3 - t*.05 + 4.));
+      float a = smoothstep(.85, 0., length(q - vec2(.35 + .15*sin(t*.21), .3 + .1*cos(t*.17))));
+      float b = smoothstep(.9, 0., length(q - vec2(1.35 + .2*cos(t*.13), .75 + .1*sin(t*.19))));
+      float c = smoothstep(.8, 0., length(q - vec2(.9 + .25*sin(t*.11), 1.05)));
+      float d = smoothstep(.7, 0., length(q - vec2(1.6, .15 + .1*sin(t*.23))));
+      vec3 col = mix(bg, bg2, uv.y);
+      col = mix(col, acc, a * .55); col = mix(col, c1, b * .45); col = mix(col, c2, c * .35); col = mix(col, bg2, d * .5);
+      col += (h(gl_FragCoord.xy + t) - .5) * .025;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // A floor grid running to a glowing horizon: technical, architectural.
+    grid: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = (gl_FragCoord.xy - .5*res) / res.y;
+      float hz = -.08; vec3 col = mix(bg, bg2, smoothstep(-.5, .5, p.y));
+      if (p.y < hz) {
+        float z = .35 / (hz - p.y); vec2 g = vec2(p.x * z, z + t * .6);
+        vec2 l = abs(fract(g) - .5) / fwidth(g);
+        float line = 1. - min(min(l.x, l.y), 1.);
+        col += acc * line * .55 * smoothstep(9., 1., z);
+      }
+      col += acc * .35 * exp(-abs(p.y - hz) * 18.) + c1 * .12 * exp(-length(p - vec2(0., hz)) * 3.);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Light falling from above in slow rays: a stage, a reveal.
+    rays: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = (gl_FragCoord.xy - vec2(.5*res.x, 1.15*res.y)) / res.y;
+      float a = atan(p.x, -p.y), r = length(p);
+      float ray = pow(.5 + .5*sin(a * 14. + t * .35 + 2.*fbm(vec2(a*3., t*.1))), 6.) * smoothstep(1.6, .2, r);
+      vec3 col = mix(bg, bg2, uv.y) + mix(acc, c1, .3) * ray * .35 + acc * .25 * smoothstep(1.2, 0., r);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Ribbons of colour in slow waves: calm, friendly.
+    waves: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      vec3 col = mix(bg, bg2, uv.y);
+      for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float y = .22 + fi * .17 + .06 * sin(p.x * (1.6 + fi*.4) + t * (.3 + fi*.07) + fi) + .03 * sin(p.x * 4. - t * .5);
+        float band = smoothstep(.07, 0., abs(uv.y - y)) ;
+        vec3 c = i == 0 ? acc : i == 1 ? c1 : i == 2 ? c2 : bg2;
+        col = mix(col, c, band * .38);
+      }
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // A halftone dot field, its dots swelling with slow noise: print, editorial.
+    dots: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; float s = 22.;
+      vec2 cell = floor(gl_FragCoord.xy / s), f = fract(gl_FragCoord.xy / s) - .5;
+      float v = fbm(cell * .06 + vec2(t*.05, -t*.03));
+      float dot = smoothstep(.02, 0., length(f) - .42 * smoothstep(.35, .75, v));
+      vec3 col = mix(bg, bg2, uv.y) + mix(acc, c1, uv.x) * dot * .45;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Flat colour with film grain and a soft vignette: minimal, lets the content speak.
+    grain: `void main(){
+      vec2 uv = gl_FragCoord.xy / res;
+      vec3 col = mix(bg2, bg, smoothstep(0., 1.1, length(uv - vec2(.5, .55))));
+      col += (h(gl_FragCoord.xy + floor(t*12.)) - .5) * .05;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    solid: `void main(){ gl_FragColor = vec4(bg, 1.); }`,
+    // Liquid: domain-warped noise, like ink folding in water.
+    liquid: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.) * 1.6;
+      vec2 q = vec2(fbm(p + t*.04), fbm(p + 5.2 - t*.03));
+      vec2 r = vec2(fbm(p + 3.*q + 1.7 + t*.05), fbm(p + 3.*q + 9.2));
+      float v = fbm(p + 3.5*r);
+      vec3 col = mix(bg, bg2, v); col = mix(col, acc, smoothstep(.55, .9, v) * .7); col = mix(col, c1, smoothstep(.75, 1., length(q)) * .35);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Plasma: the classic sum of sines, in the palette.
+    plasma: `void main(){
+      vec2 p = (gl_FragCoord.xy - .5*res) / res.y * 3.;
+      float v = sin(p.x + t*.5) + sin(p.y*1.3 - t*.4) + sin((p.x + p.y)*.8 + t*.3) + sin(length(p + vec2(sin(t*.2), cos(t*.25)))*2. - t*.6);
+      v = .5 + .5*sin(v * 1.3);
+      vec3 col = mix(mix(bg, acc, smoothstep(.2, .7, v)), c1, smoothstep(.65, 1., v) * .6);
+      gl_FragColor = vec4(mix(bg, col, .8), 1.);
+    }`,
+    // Cells: a slowly shifting Voronoi pattern, edges lit in the accent.
+    cells: `vec2 hh(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
+    void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.) * 5.;
+      vec2 i = floor(p), f = fract(p); float d1 = 8., d2 = 8.; vec2 id;
+      for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+        vec2 g = vec2(x, y), o = hh(i + g); o = .5 + .45*sin(t*.4 + 6.2831*o);
+        float d = length(g + o - f);
+        if (d < d1) { d2 = d1; d1 = d; id = i + g; } else if (d < d2) d2 = d;
+      }
+      float edge = smoothstep(.06, 0., d2 - d1);
+      vec3 col = mix(bg, bg2, h(id)) + acc * edge * .5;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Stripes: bold diagonal bands sliding past: energetic, sporty.
+    stripes: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      float s = fract((p.x + p.y) * 3. - t * .25);
+      float band = smoothstep(.0, .02, s) * smoothstep(.5, .48, s);
+      vec3 col = mix(bg, mix(bg2, acc, .25 + .25*sin(p.x*2. + t*.3)), band * .55);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Blueprint: a drafting grid, major and minor lines, a scan line passing.
+    blueprint: `void main(){
+      vec2 px = gl_FragCoord.xy;
+      vec2 a = abs(fract(px / 24.) - .5) * 24., b = abs(fract(px / 120.) - .5) * 120.;
+      float minor = 1. - smoothstep(0., 1.2, min(a.x, a.y)), major = 1. - smoothstep(0., 1.5, min(b.x, b.y));
+      float scan = exp(-abs(fract(t*.08) * res.y - px.y) * .02);
+      vec3 col = bg + acc * (minor * .07 + major * .18) + acc * scan * .08;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Topography: contour lines over a slowly breathing terrain.
+    topo: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.) * 2.2;
+      float e = fbm(p + vec2(t*.02, t*.015)) * 9.;
+      // Distance to the nearest contour (an integer height), in pixels: a line where it is small.
+      float line = 1. - smoothstep(.5, 1.5, (.5 - abs(fract(e) - .5)) / fwidth(e));
+      float major = 1. - smoothstep(.8, 2., (.5 - abs(fract(e / 4.) - .5)) * 4. / fwidth(e));
+      vec3 col = mix(bg, bg2, uv.y) + acc * line * .18 + c1 * major * .14;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Bokeh: out-of-focus lights drifting up: warm, celebratory, evening.
+    bokeh: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = gl_FragCoord.xy / res.y;
+      vec3 col = mix(bg, bg2, uv.y * .8);
+      for (int i = 0; i < 28; i++) {
+        float fi = float(i);
+        vec2 c = vec2(h(vec2(fi, 1.)) * res.x/res.y, fract(h(vec2(fi, 2.)) + t * (.01 + .02*h(vec2(fi, 3.)))));
+        float r = .03 + .07 * h(vec2(fi, 4.));
+        float d = length(p - c * vec2(1., 1.2) + vec2(0., .1));
+        float disc = smoothstep(r, r * .85, d) * (.35 + .25 * sin(t + fi));
+        col += mix(acc, c1, h(vec2(fi, 5.))) * disc * .35;
+      }
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Sunburst: radial rays turning slowly behind the centre: a reveal, a celebration, a title.
+    sunburst: `void main(){
+      vec2 p = (gl_FragCoord.xy - .5*res) / res.y;
+      float a = atan(p.y, p.x) + t * .05;
+      float ray = step(.5, fract(a / 6.2831 * 18.));
+      vec3 col = mix(bg, mix(bg2, acc, .35), ray * .6 * smoothstep(1.2, .1, length(p)));
+      col += acc * .3 * smoothstep(.5, 0., length(p));
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Lava: soft metaballs rising and merging.
+    lava: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = (gl_FragCoord.xy - .5*res) / res.y;
+      float f = 0.;
+      for (int i = 0; i < 7; i++) {
+        float fi = float(i);
+        vec2 c = vec2(.7 * sin(t*.13*(1. + fi*.2) + fi*2.), .45 * sin(t*.11*(1. + fi*.15) + fi*1.3));
+        f += .018 / dot(p - c, p - c);
+      }
+      float m = smoothstep(.9, 1.2, f), glow = smoothstep(.3, 1., f);
+      vec3 col = mix(bg, bg2, uv.y) + acc * glow * .2; col = mix(col, mix(acc, c1, uv.y), m * .8);
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Stars: a calm night sky with twinkling stars and a faint band of glow.
+    stars: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 g = gl_FragCoord.xy / 3.;
+      vec2 cell = floor(g / 9.); vec2 f = fract(g / 9.) - .5;
+      float r = h(cell); float star = r > .93 ? smoothstep(.12, 0., length(f - (vec2(h(cell + 1.), h(cell + 2.)) - .5) * .7)) : 0.;
+      star *= .5 + .5 * sin(t * (1. + 2.*h(cell + 3.)) + r * 30.);
+      vec3 col = mix(bg, bg2, uv.y) + acc * .12 * fbm(uv * 3. + t*.01) * smoothstep(.7, .2, abs(uv.y - .6 - .2*uv.x));
+      col += mix(vec3(1.), c1, h(cell + 4.) * .5) * star;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Spotlight: two soft spotlights sweeping a dark stage.
+    spotlight: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      vec2 a = vec2(.6 + .5 * sin(t*.3), .45 + .1 * cos(t*.4)), b = vec2(1.2 + .4 * cos(t*.25), .55 + .1 * sin(t*.35));
+      float s = smoothstep(.55, 0., length(p - a)) * .6 + smoothstep(.45, 0., length(p - b)) * .45;
+      vec3 col = bg * .8 + mix(acc, c1, .4) * s * .5 + bg2 * s * .6;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Rings: concentric ripples pulsing outward from a point: sound, signal, a drop of water.
+    rings: `void main(){
+      vec2 p = (gl_FragCoord.xy - vec2(.68, .45)*res) / res.y;
+      float d = length(p), r = fract(d * 4. - t * .3);
+      float ring = smoothstep(.06, 0., abs(r - .5) - .02) * smoothstep(1.4, .1, d);
+      vec3 col = mix(bg, bg2, smoothstep(1., 0., d) * .6) + acc * ring * .35;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Gradient: a soft, grainy two-tone gradient that slowly turns: editorial, premium.
+    gradient: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; float a = t * .05;
+      float k = dot(uv - .5, vec2(cos(a), sin(a))) + .5;
+      vec3 col = mix(mix(bg, bg2, smoothstep(0., .6, k)), acc, smoothstep(.55, 1.2, k) * .7);
+      col += (h(gl_FragCoord.xy + floor(t*12.)) - .5) * .06;
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Sky: a gradient sky with soft clouds drifting: light, outdoors, optimistic.
+    sky: `void main(){
+      vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
+      vec3 col = mix(bg2, bg, uv.y);
+      float c = smoothstep(.5, .8, fbm(p * vec2(1.5, 3.) + vec2(t * .02, 0.)));
+      col = mix(col, mix(vec3(1.), c1, .1), c * .7 * smoothstep(.2, .7, uv.y));
+      gl_FragColor = vec4(col, 1.);
+    }`,
+    // Scanlines: a CRT-style field, lines and a rolling bar: retro, tech, gaming.
+    scanlines: `void main(){
+      vec2 uv = gl_FragCoord.xy / res;
+      float lines = .5 + .5 * sin(gl_FragCoord.y * 1.6);
+      float roll = smoothstep(.1, 0., abs(fract(uv.y + t * .05) - .5) - .35);
+      vec3 col = mix(bg, bg2, uv.y) * (.85 + .15 * lines) + acc * roll * .06;
+      col *= .9 + .1 * smoothstep(1.2, .3, length(uv - .5));
+      gl_FragColor = vec4(col, 1.);
+    }`,
+  };
+  let gl, buf;
+  const programs = new Map();
+  const rgbOf = (v) => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = (v || '#000').trim(); c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3).map((x) => x / 255); };
+  function program(name, src) {
+    if (programs.has(name)) return programs.get(name);
+    const sh = (type, code) => {
+      const o = gl.createShader(type);
+      gl.shaderSource(o, code);
+      gl.compileShader(o);
+      if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(`backdrop "${name}": ${gl.getShaderInfoLog(o)}`);
+      return o;
+    };
+    const prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, '#extension GL_OES_standard_derivatives : enable\n' + GLSL_LIB + src));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+    const loc = gl.getAttribLocation(prog, 'p');
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const css = getComputedStyle(document.documentElement);
+    const pal = window.PALETTE_EXTRA;
+    const colors = { bg: css.getPropertyValue('--bg'), bg2: css.getPropertyValue('--bg2'), acc: css.getPropertyValue('--accent'), c1: pal[0] || '#3fd5e6', c2: pal[1] || css.getPropertyValue('--bg2'), c3: pal[2] || css.getPropertyValue('--accent'), c4: pal[3] || css.getPropertyValue('--bg2') };
+    for (const [k, v] of Object.entries(colors)) gl.uniform3fv(gl.getUniformLocation(prog, k), rgbOf(v));
+    const p = { prog, t: gl.getUniformLocation(prog, 't'), res: gl.getUniformLocation(prog, 'res') };
+    programs.set(name, p);
+    return p;
+  }
+  // backdrop(t, speed, which): which is a built-in name, or { name, src } for a shader from the spec.
+  // A page backdrop (React component, HyperFrames block, any HTML) is loaded before the frame is drawn.
+  // A React page renders after its modules load (from esm.sh) and React commits: wait for its root to fill.
+  async function rendered(win) {
+    const root = win.document.getElementById('root');
+    if (!root || !win.document.querySelector('script[type=module]')) return;
+    for (let i = 0; i < 150 && !root.childElementCount; i++) {
+      win.__showhowClock?.set(win.__showhowClock.time);
+      await new Promise((r) => setTimeout(r, 40));
+    }
+    if (!root.childElementCount) throw new Error('a React page rendered nothing: check its import (browser console) and its export');
+  }
+  async function loadBackdrop(which) {
+    if (!which || typeof which !== 'object' || !which.url) return;
+    const f = $('bdframe');
+    if (f.dataset.url === which.url) return;
+    f.dataset.url = which.url;
+    // Hidden by visibility, never display: libraries that pause when off screen (IntersectionObserver)
+    // or size themselves to their box (ResizeObserver) must see a full-frame, visible page.
+    await new Promise((ok) => { f.onload = ok; f.src = which.url; });
+    const win = f.contentWindow;
+    await rendered(win);
+    await new Promise((r) => setTimeout(r, 150));
+    await win.document.fonts.ready;
+    win.__showhowClock?.set(0);
+    if (win.__timelines && Object.keys(win.__timelines).length) { win.__bdtl = Object.values(win.__timelines)[0]; win.__bdtl.pause(); }
+  }
+  function backdrop(t, speed, which = window.BACKDROP) {
     const canvas = $('aurora');
+    const page = typeof which === 'object' && which && which.url;
+    $('bdframe').style.visibility = page ? 'visible' : 'hidden';
+    canvas.style.visibility = page ? 'hidden' : 'visible';
+    if (page) {
+      const win = $('bdframe').contentWindow;
+      win.__showhowClock?.set(t * speed);
+      // A block's timeline loops over the step: backdrops are ambient.
+      if (win.__bdtl) win.__bdtl.seek((t * speed) % Math.max(0.01, win.__bdtl.duration()), false);
+      return;
+    }
     if (!gl) {
       gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false });
       if (!gl) return;
-      const vs = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }';
-      const fs = `precision highp float;
-        uniform float t; uniform vec3 bg; uniform vec3 acc; uniform vec2 res;
-        float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-        float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
-          return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
-        float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++){ v += a*n(p); p = p*2.02 + 3.1; a *= .5; } return v; }
-        void main(){
-          vec2 uv = gl_FragCoord.xy / res; vec2 p = uv * vec2(res.x/res.y, 1.);
-          float w = fbm(vec2(p.x*1.4 + t*.05, t*.04));
-          float band = smoothstep(.0, .55, .32 - abs(uv.y - .38 - w*.35 + .1*sin(p.x*2.2 + t*.25)));
-          float band2 = smoothstep(.0, .5, .2 - abs(uv.y - .62 + w*.25 - .08*sin(p.x*1.6 - t*.2)));
-          vec3 a2 = mix(acc, vec3(.25, .85, .95), .45);
-          vec3 col = bg + acc * band * .55 * (.6 + .7*fbm(p*3. + t*.08)) + a2 * band2 * .32;
-          col += acc * .10 * (1. - uv.y);
-          col *= .82 + .18 * smoothstep(1.3, .2, length(uv - vec2(.35, .45)));
-          gl_FragColor = vec4(col, 1.);
-        }`;
-      const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
-      prog = gl.createProgram();
-      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
-      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
-      gl.linkProgram(prog);
-      gl.useProgram(prog);
-      const buf = gl.createBuffer();
+      gl.getExtension('OES_standard_derivatives');
+      buf = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      const loc = gl.getAttribLocation(prog, 'p');
-      gl.enableVertexAttribArray(loc);
-      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      uT = gl.getUniformLocation(prog, 't');
-      const css = getComputedStyle(document.documentElement);
-      const rgb = (v) => { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = v.trim(); c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3).map((x) => x / 255); };
-      gl.uniform3fv(gl.getUniformLocation(prog, 'bg'), rgb(css.getPropertyValue('--bg')));
-      gl.uniform3fv(gl.getUniformLocation(prog, 'acc'), rgb(css.getPropertyValue('--accent')));
-      gl.uniform2f(gl.getUniformLocation(prog, 'res'), canvas.width, canvas.height);
     }
+    const name = typeof which === 'object' && which ? which.name : which || 'aurora';
+    const src = typeof which === 'object' && which ? which.src : BACKDROPS[name];
+    if (!src) throw new Error(`no backdrop "${name}" (built in: ${Object.keys(BACKDROPS).join(', ')}; or { shader: file.frag })`);
+    const p = program(name, src);
+    gl.useProgram(p.prog);
+    gl.uniform2f(p.res, canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniform1f(uT, t * speed);
+    gl.uniform1f(p.t, t * speed);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -426,8 +764,9 @@
       frame.dataset.key = key;
       frame.dataset.src = sc.src;
       // A distinct URL per step, so the same template always reloads fresh.
-      await new Promise((ok) => { frame.onload = ok; frame.src = `${sc.src}?step=${encodeURIComponent(key)}`; });
+      await new Promise((ok) => { frame.onload = ok; frame.src = `${sc.src}${sc.src.includes('?') ? '&' : '?'}step=${encodeURIComponent(key)}`; });
       const win = frame.contentWindow;
+      await rendered(win);
       win.showhow = kit(win, sc);
       await injectGsap(win);
       // Build once, at t = 0: a GSAP timeline (seeked every frame after) or a draw function.
@@ -435,15 +774,22 @@
         win.__tl = await win.showhowTimeline(ctx(win, sc));
         if (!win.__tl || typeof win.__tl.seek !== 'function') throw new Error('scene ' + sc.src + ': showhowTimeline must return a GSAP timeline');
         win.__tl.pause();
-      } else if (typeof win.showhowScene !== 'function') throw new Error('scene ' + sc.src + ' defines neither showhowTimeline nor showhowScene');
+      } else if (typeof win.showhowScene !== 'function' && win.__timelines && Object.keys(win.__timelines).length) {
+        // A HyperFrames block: its own paused GSAP timeline, registered by composition id.
+        win.__tl = Object.values(win.__timelines)[0];
+        win.__tl.pause();
+      }
+      // Otherwise the page animates on its own (a React component, three.js, a canvas loop):
+      // the virtual clock drives it.
       await win.document.fonts.ready;
       await Promise.all([...win.document.images].map((im) => im.decode().catch(() => {})));
     }
     const win = frame.contentWindow;
     win.showhow.words = sc.words || [];
     // Callbacks on: count-ups and type-ons draw in onUpdate. Seeking is still deterministic.
+    win.__showhowClock?.set(sc.age);
     if (win.__tl) win.__tl.seek(sc.age, false);
-    else await win.showhowScene({ ...ctx(win, sc), t: sc.age });
+    else if (typeof win.showhowScene === 'function') await win.showhowScene({ ...ctx(win, sc), t: sc.age });
     await win.document.fonts.ready;
   }
 
@@ -467,6 +813,14 @@
         win.document.head.appendChild(el);
       });
     }
+    // motion.dev too: its springs, inertia and sequences, made seekable by kit.motion.
+    await new Promise((ok, fail) => {
+      const el = win.document.createElement('script');
+      el.src = `${window.GSAP_DIR}/../../motion/dist/motion.js`;
+      el.onload = ok;
+      el.onerror = () => fail(new Error('could not load motion'));
+      win.document.head.appendChild(el);
+    });
     win.gsap.registerPlugin(win.CustomEase, win.DrawSVGPlugin, win.MotionPathPlugin, win.MorphSVGPlugin, win.SplitText);
     win.gsap.ticker.lagSmoothing(0);
     // Timelines are thenables; awaiting one (an async showhowTimeline) would wait for it to finish playing.
@@ -477,8 +831,16 @@
   // The kit a scene gets as window.showhow.
   function kit(win, sc) {
     const css = getComputedStyle(document.documentElement);
-    const theme = { ...window.APP_THEME, ...Object.fromEntries(['--bg', '--bg2', '--accent', '--text', '--font'].map((k) => [k.slice(2), css.getPropertyValue(k).trim()])) };
+    const theme = { ...window.APP_THEME, ...Object.fromEntries(['--bg', '--bg2', '--accent', '--text', '--on-accent', '--font', '--heading'].map((k) => [k.slice(2), css.getPropertyValue(k).trim()])), palette: window.PALETTE_EXTRA };
     for (const [k, v] of Object.entries(theme)) if (typeof v === 'string' && v) win.document.documentElement.style.setProperty('--' + k, v);
+    theme.palette.forEach((c, i) => win.document.documentElement.style.setProperty(`--palette-${i + 1}`, c));
+    // The brand's fonts (theme.fonts) inside the scene too: an iframe doesn't see the stage's @font-face.
+    if (window.FONTS_CSS && !win.document.getElementById('showhow-fonts')) {
+      const st = win.document.createElement('style');
+      st.id = 'showhow-fonts';
+      st.textContent = window.FONTS_CSS;
+      win.document.head.appendChild(st);
+    }
     // at('consultar'): when the narration first says it, so a beat lands on the word.
     const norm = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const k = { spring, clamp01, theme, words: sc.words || [], sounds: [] };
@@ -544,6 +906,42 @@
         }
       }
     };
+    // mouth(t): how open a speaking mouth is (0–1) at scene time t, from the narration's word timings:
+    // shut between words, opening and closing about once per syllable within one. Deterministic.
+    k.mouth = (t) => {
+      const w = k.words.find((x) => t >= x.start && t < x.end);
+      if (!w) return 0;
+      const syl = Math.max(1, (w.word.match(/[aeiouyáéíóúü]+/gi) || []).length);
+      const p = (t - w.start) / Math.max(0.05, w.end - w.start);
+      return 0.25 + 0.75 * Math.abs(Math.sin(Math.PI * syl * p));
+    };
+    // talking(t): is the narration mid-sentence (a word now, or a pause shorter than 0.35 s)?
+    k.talking = (t) => k.words.some((x) => t >= x.start - 0.05 && t < x.end + 0.35);
+    // blink(t): eyes shut for ~0.12 s every 2.8–4.4 s, the same on every render.
+    k.blink = (t, seed = 1) => {
+      let at = 1.2 + (seed % 7) * 0.31;
+      for (let i = 0; at <= t; i++) {
+        if (t < at + 0.12) return true;
+        at += 2.8 + 1.6 * Math.abs(Math.sin(i * 12.9898 + seed));
+      }
+      return false;
+    };
+    // lipsync(tl, set): calls set({ mouth, talking, blink }) on every frame of the timeline, so a
+    // character speaks the narration's words. set picks a mouth shape, scales a path, swaps an image.
+    k.lipsync = (tl, set, { from = 0, to } = {}) => {
+      const end = to ?? (k.words.at(-1)?.end ?? 0) + 1;
+      tl.to({}, { duration: Math.max(0.01, end - from), ease: 'none', onUpdate() { const t = from + this.time(); set({ t, mouth: k.mouth(t), talking: k.talking(t), blink: k.blink(t) }); } }, from);
+      return tl;
+    };
+    // motion(tl, controls, at): a motion.dev animation (Motion.animate(el, …, { type: 'spring' }), a
+    // sequence, anything with .time and .duration) paused and driven by the scene's timeline from `at`,
+    // so Motion's physics render frame-exactly like GSAP.
+    k.motion = (tl, controls, at = 0) => {
+      controls.pause();
+      controls.time = 0;
+      tl.to({}, { duration: Math.max(0.01, controls.duration), ease: 'none', onUpdate() { controls.time = this.time(); } }, at);
+      return controls;
+    };
     // Shared helpers, all safe to put on a seeked timeline.
     k.count = (el, from, to, opts = {}) => {
       const o = { v: from };
@@ -569,7 +967,7 @@
 
   // Draws one moment. Everything comes in `s`; nothing depends on the clock.
   window.draw = async (s) => {
-    await Promise.all([load($('frame'), s.frame), load($('fade'), s.fadeFrom)]);
+    await Promise.all([load($('frame'), s.frame), load($('fade'), s.fadeFrom), loadBackdrop(s.card?.backdrop ?? s.scene?.backdrop)]);
     $('fade').style.opacity = s.fadeFrom ? String(s.fadeAlpha) : '0';
 
     // The page covers the window (a portrait window crops it; the camera chooses what it shows).
@@ -621,7 +1019,7 @@
     if (s.caption) cap.textContent = s.caption;
 
     // A scene sits on the card's aurora: draw that bare, then the scene over it.
-    drawCard(s.card || (s.scene && { style: 'scene', title: '', alpha: s.scene.alpha, age: s.scene.age }), s.t ?? 0);
+    drawCard(s.card || (s.scene && { style: 'scene', title: '', alpha: s.scene.alpha, age: s.scene.age, backdrop: s.scene.backdrop }), s.t ?? 0);
     await drawScene(s.scene);
   };
 </script>

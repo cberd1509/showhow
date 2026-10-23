@@ -33,6 +33,20 @@ export type Action =
    */
   | { lift: Target; as: string; container?: boolean };
 
+/**
+ * The field behind cards and scenes. A built-in shader by name (see the skill for the list), or:
+ * `{ shader: x.frag }` a fragment shader of your own; `{ html: x.html }` any page; `{ react: X.jsx,
+ * props }` a React component (e.g. a React Bits background, `showhow add reactbits:Name`);
+ * `{ hyperframes: block.html, vars }` a HyperFrames block (`showhow add hyperframes:name`). Pages run on
+ * a virtual clock, so their own animation renders frame by frame.
+ */
+export type Backdrop =
+  | string
+  | { shader: string }
+  | { html: string }
+  | { react: string; props?: Record<string, unknown>; export?: string }
+  | { hyperframes: string; vars?: Record<string, unknown> };
+
 export interface Step {
   id: string;
   /** Short title, shown as the step chip and the guide heading. */
@@ -59,13 +73,25 @@ export interface Step {
    * `window.showhowScene({ t, duration, data, theme })` and draws itself as a pure function of t.
    * Rendered full-frame like a card; `data` is passed through.
    */
-  scene?: { html: string; data?: unknown };
+  scene?: {
+    html?: string;
+    data?: unknown;
+    /** A React component as the scene (props passed in), running on the virtual clock. */
+    react?: string;
+    props?: Record<string, unknown>;
+    export?: string;
+    /** A HyperFrames block as the scene: its timeline is seeked like a scene's. */
+    hyperframes?: string;
+    vars?: Record<string, unknown>;
+  };
   /** Groups steps into a chapter (video chapters, YouTube timestamps). The first step of a run starts it. */
   chapter?: string;
   /** Markdown for the written guide only: the detail a reader wants and a viewer would not sit through. */
   guide?: string;
   /** Override the automatic camera: 1 keeps the full frame. */
   zoom?: number;
+  /** This card's or scene's backdrop, instead of theme.backdrop. */
+  backdrop?: Backdrop;
 }
 
 export interface Spec {
@@ -74,6 +100,11 @@ export interface Spec {
   title: string;
   app: string;
   profile?: string;
+  /**
+   * A local app to start first (a dev server, a demo): run in the spec's folder (or `cwd`), waited for
+   * until `url` (default: `app`) answers, stopped at the end. Skipped if something already answers.
+   */
+  serve?: { command: string; url?: string; cwd?: string; timeout?: number };
   /** A visible window. Needed for sites that turn headless browsers away. */
   headed?: boolean;
   viewport?: { width: number; height: number; scale: number };
@@ -99,6 +130,17 @@ export interface Spec {
   badge?: string;
   theme?: {
     background?: string; background2?: string; accent?: string; text?: string; font?: string;
+    /** Text on the accent colour (labels, tags). Default white. */
+    onAccent?: string;
+    /** The brand's display face for titles (cards, scene headings); `font` is for body text and captions. */
+    headingFont?: string;
+    /**
+     * The brand's other colours (secondary, highlights). With background, accent and text, they are the
+     * palette: render warns when a scene or card shows saturated colours outside it.
+     */
+    palette?: string[];
+    /** Behind every card and scene, unless a step picks another. Default `aurora`. */
+    backdrop?: Backdrop;
     /** The app's own look, as probe reads it: handed to scenes as theme.app*. */
     app?: { background?: string; surface?: string; text?: string; muted?: string; accent?: string; font?: string; headingFont?: string; radius?: string };
     /** A CSS file of @font-face rules (probe writes one), so the app's fonts render without the app. */

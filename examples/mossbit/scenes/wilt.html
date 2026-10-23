@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  The hook: three office plants on a shelf; the one in the middle wilts while sticky notes pile up.
+  data: line (the headline), notes: [{ text, cue }]
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: var(--text); font-family: var(--font); }
+  #line { position: absolute; left: 150px; right: 150px; top: 110px; font-family: var(--heading); font-weight: 600; font-size: 92px; line-height: 1.05; letter-spacing: -.02em; }
+  #shelf { position: absolute; left: 260px; right: 260px; top: 800px; height: 26px; border-radius: 13px; background: #2f6b3f; box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+  .pot { position: absolute; top: 400px; width: 340px; transform-origin: 50% 100%; }
+  .pot svg { width: 340px; height: 408px; }
+  .pot .layer { position: absolute; left: 0; top: 0; }
+  .note { position: absolute; width: 270px; padding: 22px 22px 26px; background: var(--palette-1); color: #1e2a22; font-family: var(--heading); font-weight: 600; font-size: 31px; line-height: 1.15;
+    box-shadow: 0 16px 30px rgba(0,0,0,.3); border-radius: 4px 4px 4px 22px; }
+  .note:before { content: ''; position: absolute; left: 50%; top: -12px; width: 80px; height: 26px; margin-left: -40px; background: rgba(255, 248, 236, .55); transform: rotate(-3deg); }
+  @media (max-aspect-ratio: 1/1) {
+    #line { left: 80px; right: 80px; top: 190px; font-size: 96px; line-height: 1.18; }
+    #shelf { left: 60px; right: 60px; top: 1290px; }
+    .pot { top: 900px; width: 300px; } .pot svg { width: 300px; height: 360px; }
+    .note { width: 300px; font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<div id="line"></div>
+<div id="shelf"></div>
+<div id="pots"></div>
+<script src="../app/faces.js"></script>
+<script>
+  window.showhowTimeline = async ({ data, at, gsap, kit, duration }) => {
+    const W = innerWidth, VERT = innerHeight > W;
+    const M = window.Mossbit;
+    const line = document.getElementById('line');
+    line.innerHTML = data.line.split(' ').map((w) => `<span style="display:inline-block">${w}&nbsp;</span>`).join('');
+
+    // Monty and Prickles are fine; Fernando, in the middle, is about to have a bad week.
+    const size = VERT ? 300 : 340, gap = VERT ? 330 : 420;
+    const pots = document.getElementById('pots');
+    const cast = [['monstera', 'happy'], ['fern', 'both'], ['cactus', 'happy']].map(([kind, mood], i) => {
+      const el = document.createElement('div');
+      el.className = 'pot';
+      el.style.left = `${W / 2 - size / 2 + (i - 1) * gap}px`;
+      el.innerHTML = mood === 'both'
+        ? `<div class="layer happy">${M.plant({ kind, mood: 'happy', size })}</div><div class="layer thirsty" style="opacity:0">${M.plant({ kind, mood: 'thirsty', size })}</div>`
+        : M.plant({ kind, mood, size });
+      if (mood === 'both') el.style.height = `${size * 1.2}px`;
+      pots.appendChild(el);
+      return el;
+    });
+    const fern = cast[1];
+    await kit.ready();
+
+    const tl = gsap.timeline();
+    tl.from('#line span', { y: 40, opacity: 0, filter: 'blur(10px)', duration: 0.8, stagger: 0.08, ease: 'expo.out' }, 0.1);
+    tl.from('#shelf', { scaleX: 0, duration: 0.8, ease: 'expo.out' }, 0.05);
+    cast.forEach((el, i) => {
+      tl.from(el, { y: 160, opacity: 0, duration: 0.8, ease: 'back.out(1.6)' }, 0.25 + i * 0.12);
+      kit.sfx(0.25 + i * 0.12, 'drop', 0.18);
+    });
+    // The neighbours sway, content; Fernando sags, yellows and sweats as the line goes on.
+    tl.to([cast[0], cast[2]], { rotate: (i) => (i ? -2 : 2), duration: 1.6, yoyo: true, repeat: Math.ceil(duration / 1.6), ease: 'sine.inOut' }, 1.1);
+    const sag = Math.max(1.6, at('nobody', 2.6) - 0.5);
+    tl.to(fern.querySelector('.thirsty'), { opacity: 1, duration: 1.4, ease: 'power1.inOut' }, sag);
+    tl.to(fern, { scaleY: 0.94, scaleX: 1.03, rotate: -3, duration: 1.6, ease: 'power2.inOut' }, sag);
+
+    // Sticky notes land around the sad one, each on its word.
+    const spots = VERT
+      ? [[90, 560, -6], [W - 390, 620, 5], [W / 2 - 150, 700, -3]]
+      : [[W / 2 - 640, 262, -6], [W / 2 - 135, 252, 3], [W / 2 + 360, 266, -4]];
+    let last = sag;
+    (data.notes || []).forEach((n, i) => {
+      const el = document.createElement('div');
+      el.className = 'note';
+      el.textContent = n.text;
+      const [x, y, r] = spots[i % spots.length];
+      Object.assign(el.style, { left: `${x}px`, top: `${y}px`, transform: `rotate(${r}deg)` });
+      document.body.appendChild(el);
+      const t = Math.max(last + 0.45, at(n.cue, last + 0.8) - 0.1);
+      tl.from(el, { scale: 0.3, opacity: 0, rotate: r * 4, duration: 0.55, ease: 'back.out(2.2)' }, t);
+      kit.sfx(t, 'pop', 0.22);
+      last = t;
+    });
+    return tl;
+  };
+</script>
+</body>
+</html>

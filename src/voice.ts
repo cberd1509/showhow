@@ -19,7 +19,8 @@ export interface Line {
 }
 
 const ELEVEN_DEFAULT_VOICE = 'XrExE9yKIg1WjnnlVkGX'; // Matilda: clear, informative
-const ELEVEN_DEFAULT_MODEL = 'eleven_multilingual_v2';
+// Eleven v3: the most natural, expressive model (and it reads audio tags like [laughs], [whispers]).
+const ELEVEN_DEFAULT_MODEL = 'eleven_v3';
 
 /**
  * One audio file per step, with word timings. Cached by the exact text and
@@ -31,7 +32,11 @@ export async function voice(file: string): Promise<Line[]> {
   const { spec } = loadSpec(file);
   const dir = path.join(outputDir(file), 'voice');
   mkdirSync(dir, { recursive: true });
-  const provider = spec.voice?.provider ?? (process.env.ELEVENLABS_API_KEY ? 'elevenlabs' : 'say');
+  // ElevenLabs unless the spec asks for the macOS voice (a local draft only: it sounds robotic).
+  const provider = spec.voice?.provider ?? 'elevenlabs';
+  if (provider === 'elevenlabs' && !process.env.ELEVENLABS_API_KEY) throw new Error('no ElevenLabs key: run `showhow key` in your own terminal (or `voice: { provider: say }` for a rough local draft)');
+  // The model actually used, in the cache key: a new default re-voices instead of reusing old audio.
+  const model = provider === 'elevenlabs' ? spec.voice?.model ?? ELEVEN_DEFAULT_MODEL : undefined;
   const spoken = spec.steps.filter((s) => s.say);
 
   const lines: Line[] = [];
@@ -40,7 +45,7 @@ export async function voice(file: string): Promise<Line[]> {
   for (const [i, step] of spoken.entries()) {
     const text = speakable(step.say!);
     const key = createHash('sha1')
-      .update(JSON.stringify([provider, spec.voice?.voice, spec.voice?.model, spec.voice?.language, text]))
+      .update(JSON.stringify([provider, spec.voice?.voice, model, spec.voice?.language, text]))
       .digest('hex')
       .slice(0, 12);
     const base = path.join(dir, `${step.id}-${key}`);
@@ -53,7 +58,7 @@ export async function voice(file: string): Promise<Line[]> {
     // same line with the same neighbours (they shape the intonation) is the same audio. Paid once.
     const prev = spoken[i - 1] && speakable(spoken[i - 1].say!);
     const next = spoken[i + 1] && speakable(spoken[i + 1].say!);
-    const sharedKey = createHash('sha1').update(JSON.stringify([provider, spec.voice?.voice, spec.voice?.model, spec.voice?.language, text, prev, next])).digest('hex');
+    const sharedKey = createHash('sha1').update(JSON.stringify([provider, spec.voice?.voice, model, spec.voice?.language, text, prev, next])).digest('hex');
     const shared = path.join(VOICE_CACHE, sharedKey);
     if (existsSync(`${shared}.json`)) {
       const cached: Line = JSON.parse(readFileSync(`${shared}.json`, 'utf8'));
@@ -69,7 +74,7 @@ export async function voice(file: string): Promise<Line[]> {
       provider === 'elevenlabs'
         ? await eleven(spec, step.id, text, base, prev, next)
         : say(spec, step.id, text, base);
-    line.words = unpronounce(line.words, pronounce);
+    line.words = untag(unpronounce(line.words, pronounce));
     writeFileSync(meta, JSON.stringify(line, null, 2));
     mkdirSync(VOICE_CACHE, { recursive: true });
     const keep = `${shared}${path.extname(line.file)}`;
@@ -94,6 +99,7 @@ async function eleven(spec: Spec, step: string, text: string, base: string, prev
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error('ELEVENLABS_API_KEY is not set');
   const voiceId = spec.voice?.voice ?? ELEVEN_DEFAULT_VOICE;
+  const v3 = (spec.voice?.model ?? ELEVEN_DEFAULT_MODEL) === 'eleven_v3';
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps?output_format=mp3_44100_128`,
     {
@@ -103,10 +109,10 @@ async function eleven(spec: Spec, step: string, text: string, base: string, prev
         text,
         model_id: spec.voice?.model ?? ELEVEN_DEFAULT_MODEL,
         language_code: spec.voice?.language,
-        // Neighbouring lines keep the intonation continuous across steps.
-        previous_text: prev,
-        next_text: next,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true },
+        // Neighbouring lines keep the intonation continuous across steps (older models; v3 doesn't take them).
+        ...(v3 ? {} : { previous_text: prev, next_text: next }),
+        // v3's stability is one of 0 (creative), 0.5 (natural), 1 (robust); the rest are earlier models' knobs.
+        voice_settings: v3 ? { stability: 0.5 } : { stability: 0.5, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true },
       }),
     },
   );
@@ -192,3 +198,18 @@ export function wordTime(line: Line | undefined, word: string): number | undefin
   }
   return undefined;
 }
+
+/** Eleven v3 audio tags ([excited], [speaking softly]) shape the delivery; they aren't words to caption. */
+function untag(words: Line['words']): Line['words'] {
+  let inside = false;
+  return words.filter((w) => {
+    const open = w.word.startsWith('[');
+    if (open) inside = true;
+    const keep = !inside;
+    if (w.word.includes(']')) inside = false;
+    return keep;
+  });
+}
+
+/** The narration as text, without audio tags: for the guide. */
+export const plainSay = (s: string) => s.replace(/\[[^\]]*\]\s*/g, '').trim();

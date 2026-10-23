@@ -1,0 +1,19 @@
+# The plant's public page as a phone shows it, before and after watering: lifts for the video's phone
+# scenes. Run `showhow probe mossbit-phone.yaml`, then copy probe/lifts/*.html into lifts/.
+title: Mossbit phone lifts
+app: http://localhost:4173/p/fernando
+serve: { command: node app/server.mjs }
+profile: mossbit-phone
+viewport: { width: 390, height: 844, scale: 3 }
+steps:
+  - id: page
+    do:
+      - goto: http://localhost:4173/p/fernando
+      - waitFor: { role: heading, name: "Hi, I'm Fernando!" }
+      - wait: 0.6
+      - lift: { css: body }
+        as: phone-thirsty
+      - click: { role: button, name: I watered it }
+      - wait: 1.2
+      - lift: { css: body }
+        as: phone-happy

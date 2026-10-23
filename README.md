@@ -34,6 +34,7 @@ flowchart LR
 - **Vertical format.** `format: vertical` renders 1080×1920; a vertical cut is `extends:` + `format: vertical`, sharing the narration (cached across specs).
 - **Motion graphics** between recorded steps: built-in `kinetic`, `ui`, `flow` (self-drawing diagrams with live pulses), `stats` (count-ups), `collage` (labelled real panels), `capabilities` and `media` scenes, or your own HTML with GSAP 3 (DrawSVG, MotionPath, SplitText…) on a timeline the render seeks frame by frame. Scenes cue on narration words and schedule their own sounds (curated Kenney CC0 set). `showhow scene <spec> <step>` previews one.
 - **The app's look**: probe reads its colours and fonts (embedded) for scenes that should match the product.
+- **Backdrops and brands**: eight built-in backdrops (aurora, mesh, grid, rays, waves, dots, grain, solid) or a brand's own GLSL shader; light or dark themes, a display font, a palette, and a check that warns about colours outside it. Characters can speak the narration (lip-sync from the voice's word timings), and scenes get motion.dev springs as well as GSAP.
 - **Three shapes**: a how-to tutorial, a deep-dive guide (chapters + a rich `guide.md`), or a stakeholder presentation (capabilities, how it fits, state in real numbers).
 - **Grounded**: every claim comes from the app, its docs, or facts the person gave (`facts:`, listed as sources in the guide); advice is labelled as a suggestion.
 - **Web-sized output**: `tutorial.mp4` is compressed (x264 CRF 24, chapters kept); the master stays in `work/`. `--no-compress` to skip.

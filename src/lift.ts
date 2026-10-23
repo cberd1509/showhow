@@ -65,6 +65,8 @@ export async function liftElement(loc: Locator | ElementHandle): Promise<{ html:
       // No links (they would pick up :link styles) and nothing that runs or refers back to the app's CSS.
       for (const a of [...el.attributes]) if (/^(on|href$|id$|class$|style$|tabindex$|target$)/.test(a.name)) el.removeAttribute(a.name);
       el.setAttribute('style', styleOf(cs, base(src.localName, src.namespaceURI, src.getAttribute('type'))));
+      // Pinned to the viewport in the app (a toast, a bottom bar): pinned to the lift in the copy.
+      if (cs.position === 'fixed') el.setAttribute('style', `${el.getAttribute('style')}position:absolute;`);
       cs.fontFamily.split(',').forEach((f) => families.add(f.trim().replace(/^["']|["']$/g, '')));
       for (const pseudo of ['::before', '::after']) {
         const ps = getComputedStyle(src, pseudo);

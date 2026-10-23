@@ -1,0 +1,100 @@
+# Mossbit's launch film: the flagship example of a brand with personality.
+# Audience: people who look after an office (office managers, workplace teams), seeing a launch video.
+# Value, in one sentence: office plants tell everyone what they need, so they stop dying quietly.
+# Beats and what each proves:
+#   hook (the problem everyone recognises) → reveal (Bit introduces Mossbit) → scan (anyone can check a
+#   plant: scan its pot) → water (one tap, and everyone knows) → today (the office manager sees every
+#   plant and who needs help first) → know (who cares for them, and which plants people love) → close.
+# Style: Mossbit's palette (moss, leaf, sun, clay, cream) and fonts (Fredoka, Nunito) everywhere; Bit and
+#   the plants are characters that talk and react. Mossbit, Juniper Studio and everyone in it are fictional.
+title: Mossbit
+app: http://localhost:4173/app
+serve: { command: node app/server.mjs }
+profile: mossbit-demo
+style: trailer
+voice: { provider: elevenlabs, voice: cgSgspJ2msm6clMCkdW9 }
+music:
+  prompt: Playful, warm indie-pop instrumental for a cheerful product launch, ukulele and soft marimba, light claps and a bouncy bass, sunny and gentle, steady medium tempo, no vocals
+  volume: 0.3
+  duck: 3
+theme:
+  # Light and sunlit, like the product: cream walls, moss green, warm sun. A shader of its own.
+  background: "#fff8ec"
+  background2: "#f3e9d4"
+  accent: "#4f9a52"
+  text: "#1e2a22"
+  font: Nunito, sans-serif
+  headingFont: Fredoka, Nunito, sans-serif
+  palette: ["#ffd166", "#e07a5f", "#7ccf5a", "#2f6b3f", "#7cc6e8"]   # sun, clay, leaf, deep, water
+  fonts: brand/fonts.css
+  backdrop: { shader: brand/dappled.frag }
+steps:
+  - id: hook
+    scene:
+      html: scenes/wilt.html
+      data:
+        line: Every office has that one plant.
+        notes: [{ text: "Did anyone water this?", cue: nobody }, { text: "I thought you did!", cue: supposed }, { text: "Is it… plastic?", cue: water }]
+    say: Every office has that one plant. And nobody knows who's supposed to water it.
+    do:
+      # Off camera: sign in to the demo workspace while the scene plays.
+      - goto: http://localhost:4173/login
+      - click: { role: button, name: Try the demo workspace }
+      - waitForUrl: "**/app"
+
+  - id: reveal
+    scene:
+      html: scenes/bit.html
+      data: { mode: reveal, word: mossbit, line: Now your plants can speak up., cue: speak }
+    say: Meet Mossbit. Now your plants can speak up.
+
+  - id: scan
+    scene:
+      html: scenes/phone.html
+      data: { mode: scan, plant: { kind: fern, name: Fernando }, qr: app/qr/fernando.svg, before: lifts/phone-thirsty.html, line: Scan the pot., cue: scan }
+    say: Every pot gets a tag. Scan it, and the plant tells you how it's feeling.
+
+  - id: water
+    scene:
+      html: scenes/phone.html
+      data: { mode: water, plant: { kind: fern, name: Fernando }, qr: app/qr/fernando.svg, before: lifts/phone-thirsty.html, after: lifts/phone-happy.html, button: I watered it, line: One tap., cue: tap }
+    say: Watered it? One tap, and everyone knows.
+
+  - id: today
+    say: Whoever looks after the office sees every plant at a glance, and who needs help first.
+    do:
+      - goto: http://localhost:4173/app
+      - waitFor: { role: heading, name: Needs attention }
+      - highlight: { role: region, name: Office map }
+        sync: glance
+      - highlight: { role: region, name: Needs attention }
+        sync: help
+
+  - id: know
+    scene:
+      html: showhow:collage
+      data:
+        title: Get to know your plants
+        highlight: plants
+        items:
+          - { lift: mood, label: How they're doing, cue: alive }
+          - { lift: carers, label: Who keeps them alive, cue: keeps }
+          - { lift: loved, label: Who people love, cue: love }
+    say: You'll even see who keeps them alive, and which plants people love most.
+    do:
+      - goto: http://localhost:4173/app/insights
+      - lift: { role: heading, name: Plant mood }
+        as: mood
+        container: true
+      - lift: { role: heading, name: Who keeps them alive }
+        as: carers
+        container: true
+      - lift: { role: heading, name: Most-loved plants }
+        as: loved
+        container: true
+
+  - id: close
+    scene:
+      html: scenes/bit.html
+      data: { mode: close, word: mossbit, line: Plants that ask for what they need., cue: plants }
+    say: Mossbit. Plants that ask for what they need.

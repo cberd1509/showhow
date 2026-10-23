@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Mossbit</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  aside { background: var(--sand); padding: 22px 16px; display: flex; flex-direction: column; gap: 4px; }
+  aside .logo { margin: 0 8px 22px; }
+  aside a.nav { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 15px; }
+  aside a.nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  aside a.nav.on { background: #fff; color: var(--deep); box-shadow: 0 2px 0 var(--line); }
+  aside .me { margin-top: auto; display: flex; gap: 10px; align-items: center; padding: 10px; font-weight: 700; font-size: 14px; }
+  aside .me small { display: block; color: var(--muted); font-weight: 600; }
+  main { padding: 28px 34px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+  .top h1 { font-size: 30px; }
+  .top p { color: var(--muted); margin-top: 4px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stat { padding: 18px 20px; }
+  .stat b { display: block; font-family: Fredoka, sans-serif; font-size: 32px; font-weight: 600; color: var(--deep); }
+  .stat span { color: var(--muted); font-weight: 700; font-size: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px; }
+  .rows { display: flex; flex-direction: column; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); text-decoration: none; color: inherit; }
+  .row:first-child { border-top: 0; }
+  .row .face { width: 46px; height: 55px; flex: none; }
+  .row .face svg { width: 46px; height: 55px; }
+  .row .who { flex: 1; min-width: 0; }
+  .row .who b { display: block; font-size: 16px; }
+  .row .who span { color: var(--muted); font-size: 13px; }
+  .map { position: relative; height: 270px; border-radius: 16px; background: var(--cream); overflow: hidden; }
+  .room { position: absolute; border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 12px; font-weight: 800; padding: 6px 8px; }
+  .dot { position: absolute; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 4px rgba(124, 207, 90, .25); }
+  .dot.thirsty { background: var(--sun); box-shadow: 0 0 0 5px rgba(255, 209, 102, .35); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 10px rgba(255, 209, 102, .15); } }
+  .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .plantgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .ptile { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: inherit; padding: 18px; }
+  .ptile svg { width: 110px; height: 132px; }
+  .ptile b { font-size: 17px; }
+  .ptile span { color: var(--muted); font-size: 13px; text-align: center; }
+  /* plant detail */
+  .crumb { color: var(--muted); font-weight: 700; font-size: 14px; } .crumb a { color: var(--deep); text-decoration: none; }
+  .hero { display: grid; grid-template-columns: 240px 1fr 260px; gap: 22px; align-items: start; }
+  .hero .portrait { display: flex; justify-content: center; padding: 26px 10px 14px; background: var(--sand); }
+  .hero .portrait svg { width: 180px; height: 216px; }
+  .hero h1 { font-size: 40px; }
+  .hero .species { color: var(--muted); font-weight: 700; margin: 4px 0 12px; }
+  .care { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .care div { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+  .care i { width: 32px; height: 32px; border-radius: 10px; background: #e4f5da; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
+  .tag { text-align: center; }
+  .tag .qr { width: 150px; height: 150px; margin: 6px auto 10px; padding: 12px; background: var(--cream); border-radius: 16px; }
+  .tag .qr img { width: 100%; height: 100%; }
+  .timeline .row { gap: 12px; }
+  .timeline .row small { color: var(--muted); font-weight: 700; white-space: nowrap; }
+  /* insights */
+  .ins { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; }
+  .bars { display: flex; align-items: flex-end; gap: 5px; height: 150px; }
+  .bars i { flex: 1; border-radius: 6px 6px 3px 3px; background: var(--leaf); }
+  .bars i.low { background: var(--sun); }
+  .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 700; margin-top: 8px; }
+  .lb { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-weight: 700; }
+  .lb .bar { flex: 1; height: 12px; border-radius: 6px; background: var(--sand); overflow: hidden; }
+  .lb .bar i { display: block; height: 100%; border-radius: 6px; background: var(--moss); }
+  .loved { display: flex; justify-content: space-around; }
+  .loved div { display: flex; flex-direction: column; align-items: center; font-weight: 800; }
+  .loved svg { width: 84px; height: 100px; }
+  .loved span { color: var(--clay); }
+</style></head>
+<body>
+<aside>
+  <a class="logo" href="/app"><span id="mini"></span>mossbit</a>
+  <a class="nav" href="/app" data-r="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Today</a>
+  <a class="nav" href="/app/plants" data-r="plants"><svg viewBox="0 0 24 24"><path d="M12 21v-8M12 13c0-4 3-7 8-7 0 5-3 8-8 7zM12 15c0-3-2-6-7-6 0 4 3 6 7 6z"/></svg>Plants</a>
+  <a class="nav" href="/app/insights" data-r="insights"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Insights</a>
+  <a class="nav" href="/app/tags" data-r="tags"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z"/></svg>QR tags</a>
+  <a class="nav" href="/app/settings" data-r="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Settings</a>
+  <div class="me"><span class="avatar" style="background:#2f6b3f">SO</span><div id="me">Sam Okafor<small>Juniper Studio</small></div></div>
+</aside>
+<main id="main"></main>
+<script src="/faces.js"></script>
+<script src="/app.js"></script>
+</body></html>

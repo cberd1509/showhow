@@ -14,16 +14,16 @@
 -->
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: #fff;
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: var(--text, #fff);
     font-family: var(--font, "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif); -webkit-font-smoothing: antialiased; }
   #root { position: absolute; inset: 0; padding: 100px 150px 0; display: flex; flex-direction: column; }
   .kicker { align-self: flex-start; display: inline-flex; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px;
     font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
     background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
   .kicker:before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
-  h1 { margin-top: 26px; font-size: 76px; line-height: 1.04; letter-spacing: -.035em; font-weight: 750; }
+  h1 { font-family: var(--heading, var(--font)); margin-top: 26px; font-size: 76px; line-height: 1.04; letter-spacing: -.035em; font-weight: 750; }
   h1 span { display: inline-block; white-space: pre; }
-  h1 span.hl { background: linear-gradient(100deg, #fff 10%, color-mix(in srgb, var(--accent) 55%, #fff) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h1 span.hl { background: linear-gradient(100deg, var(--text, #fff) 10%, color-mix(in srgb, var(--accent) 55%, var(--text, #fff)) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .cols { margin-top: 54px; display: grid; gap: 36px; align-items: start; }
   .col { border-radius: 26px; padding: 34px 36px 30px; background: rgba(255,255,255,.055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); backdrop-filter: blur(8px); }
   .col h2 { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }

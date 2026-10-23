@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Sign in · Mossbit</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; }
+  .art { background: var(--forest); color: var(--cream); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 26px; padding: 40px; position: relative; overflow: hidden; }
+  .art:before { content: ''; position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(124, 207, 90, .22), transparent 65%); }
+  .art h1 { font-size: 40px; text-align: center; line-height: 1.1; position: relative; }
+  .art h1 em { font-style: normal; color: var(--leaf); }
+  .art .bit { position: relative; animation: bob 3s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-10px); } }
+  .form { display: flex; flex-direction: column; justify-content: center; padding: 0 12%; gap: 18px; }
+  .form h2 { font-size: 32px; }
+  .form p { color: var(--muted); }
+  .field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
+  .field input { padding: 13px 16px; border-radius: 14px; border: 2px solid var(--line); font: inherit; background: #fff; color: var(--muted); }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; } .or:before, .or:after { content: ''; flex: 1; height: 1px; background: var(--line); }
+</style></head>
+<body>
+  <div class="art"><div id="bit"></div><h1>Office plants that <em>ask</em><br>for what they need.</h1></div>
+  <div class="form">
+    <a class="logo" href="/"><span id="mini"></span>mossbit</a>
+    <h2>Welcome back</h2>
+    <p>Sign in to see how your plants are doing.</p>
+    <label class="field">Work email<input value="sam@juniper.example" disabled></label>
+    <button class="btn" disabled style="opacity:.5;justify-content:center">Continue with email</button>
+    <div class="or">this is a demo</div>
+    <button class="btn leaf" id="demo" style="justify-content:center">Try the demo workspace</button>
+  </div>
+<script src="/faces.js"></script>
+<script>
+  document.getElementById('bit').innerHTML = Mossbit.bit({ size: 230 });
+  document.getElementById('mini').innerHTML = Mossbit.bit({ size: 34 });
+  document.getElementById('demo').onclick = async () => { await fetch('/api/session', { method: 'POST' }); location.href = '/app'; };
+</script>
+</body></html>

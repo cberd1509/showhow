@@ -1,6 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { activePage, applyPrivacy, launch } from './browser.ts';
+import { withServer } from './serve.ts';
 import { loadSpec } from './spec.ts';
 import { outputDir } from './paths.ts';
 import { readLines } from './voice.ts';
@@ -13,6 +14,11 @@ export interface Capture {
 }
 
 export async function record(file: string, opts: { headed: boolean }) {
+  const { spec, dir } = loadSpec(file);
+  return withServer(spec, dir, () => recordNow(file, opts));
+}
+
+async function recordNow(file: string, opts: { headed: boolean }) {
   const { spec, dir } = loadSpec(file);
   const lines = readLines(file);
   const out = path.join(outputDir(file), 'capture');

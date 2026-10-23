@@ -6,7 +6,8 @@ import path from 'node:path';
 import { loadSpec, type Spec } from './spec.ts';
 import { outputDir } from './paths.ts';
 import { GEOMETRY } from './format.ts';
-import { readLines } from './voice.ts';
+import { CLOCK_SCRIPT } from './clock.ts';
+import { plainSay, readLines } from './voice.ts';
 import { Timeline, captionsOf } from './timeline.ts';
 import type { Capture } from './record.ts';
 
@@ -28,6 +29,8 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--allow-file-access-from-files'] });
   const geo = GEOMETRY[spec.format ?? 'landscape'];
   const page = await browser.newPage({ viewport: { width: geo.width, height: geo.height }, deviceScaleFactor: 1 });
+  // Scenes and backdrops run on a virtual clock the render advances frame by frame.
+  await page.addInitScript(CLOCK_SCRIPT);
   await page.goto(`file://${STAGE}`);
   const app = Object.fromEntries(Object.entries(spec.theme?.app ?? {}).map(([k, v]) => [`app${k[0].toUpperCase()}${k.slice(1)}`, v]));
   const fontsCss = spec.theme?.fonts ? readFileSync(path.resolve(dir, spec.theme.fonts), 'utf8') : '';
@@ -57,6 +60,7 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   for (const [what, state] of layouts) {
     await page.evaluate((s) => (window as any).draw(s), state);
     for (const issue of await page.evaluate(() => (window as any).layoutIssues() as string[])) problems.push(`${what}: ${issue}`);
+    for (const w of await page.evaluate(() => (window as any).paletteIssues() as string[])) console.warn(`render: palette: ${what}: ${w}`);
   }
   if (problems.length) {
     await browser.close();
@@ -318,12 +322,12 @@ function writeGuide(spec: ReturnType<typeof loadSpec>['spec'], tl: Timeline, sho
     const h = grouped ? '###' : '##';
     if (p.n) {
       md.push(`${h} ${p.n}. ${step.title}`, '');
-      if (step.say) md.push(step.say.trim(), '');
+      if (step.say) md.push(plainSay(step.say), '');
       const shot = shots[step.id];
       if (shot) md.push(`![${step.title}](${path.relative(out, shot)})`, '');
     } else if (step.scene) {
       if (step.title) md.push(`${h} ${step.title}`, '');
-      if (step.say) md.push(step.say.trim(), '');
+      if (step.say) md.push(plainSay(step.say), '');
       const shot = shots[step.id];
       if (shot) md.push(`![${step.title ?? step.id}](${path.relative(out, shot)})`, '');
     } else if (step.card && step.card.style !== 'chapter') {
@@ -331,7 +335,7 @@ function writeGuide(spec: ReturnType<typeof loadSpec>['spec'], tl: Timeline, sho
       if (step.card.subtitle) md.push(step.card.subtitle, '');
       (step.card.bullets ?? []).forEach((b, i) => md.push(`${(step.card!.start ?? 1) + i}. ${b}`));
       if (step.card.bullets?.length) md.push('');
-      if (step.say && !step.guide) md.push(step.say.trim(), '');
+      if (step.say && !step.guide) md.push(plainSay(step.say), '');
     }
     if (step.guide) md.push(step.guide.trim(), '');
   }

@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Spec, Step } from './spec.ts';
 import { GEOMETRY } from './format.ts';
+import { blockPage, reactPage } from './bundle.ts';
 import type { Capture } from './record.ts';
 import type { Box, Event } from './runner.ts';
 import type { Line } from './voice.ts';
@@ -34,7 +36,7 @@ export interface DrawState {
   chip?: { n: number; title: string; alpha: number };
   caption?: string;
   card?: CardState;
-  scene?: { src: string; age: number; duration: number; alpha: number; data?: unknown; words: { word: string; start: number; end: number }[]; base: string; key?: string };
+  scene?: { src: string; age: number; duration: number; alpha: number; data?: unknown; words: { word: string; start: number; end: number }[]; base: string; key?: string; backdrop?: StageBackdrop };
   /** Output time, for anything that just flows (the aurora). */
   t?: number;
 }
@@ -46,7 +48,32 @@ export type CardState = Omit<NonNullable<Step['card']>, 'image'> & {
   number?: number;
   image?: string;
   ring?: Box;
+  backdrop?: StageBackdrop;
 };
+
+/** A built-in backdrop's name, a shader file (its path, for caching, and its source), or a page. */
+export type StageBackdrop = string | { name: string; src: string } | { url: string };
+
+/** The page a scene step shows: a built-in template (`showhow:name`), an HTML file, a React component or a HyperFrames block. */
+export function scenePage(sc: NonNullable<Step['scene']>, specDir: string): string {
+  if (sc.react) return reactPage(path.resolve(specDir, sc.react), sc.props, sc.export);
+  if (sc.hyperframes) return blockPage(path.resolve(specDir, sc.hyperframes), sc.vars);
+  if (!sc.html) throw new Error('a scene needs html, react or hyperframes');
+  return `file://${sc.html.startsWith('showhow:') ? path.join(SCENES, `${sc.html.slice(8)}.html`) : path.resolve(specDir, sc.html)}`;
+}
+
+/** The step's backdrop, else the theme's, else the aurora; a shader file is read for the stage. */
+export function resolveBackdrop(spec: Spec, step: Step, specDir: string): StageBackdrop {
+  const b = step.backdrop ?? spec.theme?.backdrop ?? 'aurora';
+  if (typeof b === 'string') return b;
+  if ('shader' in b) {
+    const file = path.resolve(specDir, b.shader);
+    return { name: file, src: readFileSync(file, 'utf8') };
+  }
+  if ('react' in b) return { url: reactPage(path.resolve(specDir, b.react), b.props, b.export) };
+  if ('hyperframes' in b) return { url: blockPage(path.resolve(specDir, b.hyperframes), b.vars) };
+  return { url: `file://${path.resolve(specDir, b.html)}` };
+}
 
 export interface Chapter {
   title: string;
@@ -347,9 +374,7 @@ export class Timeline {
   sceneState(placed: Placed, age: number, alpha: number): NonNullable<DrawState['scene']> {
     const sc = placed.step.scene!;
     const words = this.lines.get(placed.step.id)?.words ?? [];
-    // `showhow:name` is a built-in scene template; anything else is relative to the spec.
-    const file = sc.html.startsWith('showhow:') ? path.join(SCENES, `${sc.html.slice(8)}.html`) : path.resolve(this.specDir, sc.html);
-    return { key: placed.step.id, src: `file://${file}`, base: `file://${path.resolve(this.specDir)}/`, age, duration: placed.end - placed.start, alpha, data: sc.data, words };
+    return { key: placed.step.id, src: scenePage(sc, this.specDir), base: `file://${path.resolve(this.specDir)}/`, age, duration: placed.end - placed.start, alpha, data: sc.data, words, backdrop: this.backdrop(placed.step) };
   }
 
   cardState(placed: Placed, age: number, alpha: number): CardState {
@@ -357,7 +382,12 @@ export class Timeline {
     const { image: _, ...rest } = c;
     const shot = c.style === 'chapter' || c.image === false ? {} : this.shot(c.image || this.nearestRecorded(placed));
     const number = c.style === 'chapter' ? this.steps.filter((p) => p.step.card?.style === 'chapter').indexOf(placed) + 1 : undefined;
-    return { ...rest, start: c.start ?? 1, alpha, age, number, ...shot };
+    return { ...rest, start: c.start ?? 1, alpha, age, number, ...shot, backdrop: this.backdrop(placed.step) };
+  }
+
+  /** The step's backdrop for the stage: a built-in name, or a shader file's source. */
+  private backdrop(step: Step): StageBackdrop {
+    return resolveBackdrop(this.spec, step, this.specDir);
   }
 
   /** The intro shows the first recorded step; any later card, the one before it. */
