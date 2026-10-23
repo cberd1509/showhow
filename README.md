@@ -12,12 +12,15 @@ Inspired by [/brag](https://github.com/latent-spaces/brag): same idea of the age
 
 ## How it works
 
-```
- discover            script               voice              record                         render
- probe: ARIA tree →  tutorial.yaml   →    ElevenLabs   →     Chrome (your signed-in   →     stage.html drawn frame by frame
- + screenshot +      steps, narration,    per step, with     profile), mocks injected,      (cursor, spring camera, captions,
- JSON requests       targets, mocks       word timings       paced by narration,            cards) → ffmpeg; audio mix;
-                                                             CDP screencast + event log     captions, guide, poster
+```mermaid
+flowchart LR
+  A["<b>Discover</b><br/>probe the live app:<br/>ARIA tree, screenshot,<br/>JSON requests"]
+  B["<b>Script</b><br/>tutorial.yaml:<br/>steps, narration,<br/>targets, mocks"]
+  C["<b>Voice</b><br/>ElevenLabs per step,<br/>with word timings"]
+  D["<b>Record</b><br/>Chrome, your profile,<br/>mocks injected,<br/>paced by the voice"]
+  E["<b>Render</b><br/>frame by frame:<br/>camera, cursor,<br/>captions, scenes"]
+  F["<b>Output</b><br/>tutorial.mp4, captions,<br/>chapters, guide.md"]
+  A --> B --> C --> D --> E --> F
 ```
 
 - **No source code needed.** Targets are roles and accessible names, read from the live page.
