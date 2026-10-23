@@ -15,6 +15,8 @@ const USAGE = `showhow — narrated tutorial videos of any web app
                                              unless --no-compress (the master stays in work/ either way)
   showhow make <tutorial.yaml> [--headed] [--no-compress]
                                              voice + record + render
+  showhow key [--status | --remove]          Save your ElevenLabs key (asked with hidden input, in your own
+                                             terminal) to ~/.config/showhow/.env; --status says if one is set
 
 Output goes to showhow-output/<tutorial name>/ next to the yaml.`;
 
@@ -28,6 +30,8 @@ const { positionals, values } = parseArgs({
     url: { type: 'string' },
     out: { type: 'string' },
     headed: { type: 'boolean', default: false },
+    status: { type: 'boolean' },
+    remove: { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -36,6 +40,10 @@ const [command, ...rest] = positionals;
 
 async function main() {
   switch (command) {
+    case 'key': {
+      const { key } = await import('./key.ts');
+      return key({ status: values.status, remove: values.remove });
+    }
     case 'login': {
       const { login } = await import('./login.ts');
       if (!values.profile || !rest.length) throw new Error('login needs --profile and at least one URL');

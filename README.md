@@ -8,7 +8,7 @@ You say "make a tutorial of how to invite a teammate in <your app>". The agent e
 - `tutorial.srt` / `.vtt`, `chapters.txt`
 - `guide.md` with one screenshot per step (Tango/Scribe-style)
 
-Inspired by [/brag](https://github.com/latent-spaces/brag): same idea of the agent owning the story, but tutorials need accuracy over hype, so the recording is real and deterministic code.
+Inspired by [/brag](https://github.com/latent-spaces/brag): the same idea of an agent owning the story, but tutorials need accuracy over hype, so the recording is real and the render is deterministic code.
 
 ## How it works
 
@@ -50,13 +50,21 @@ flowchart LR
 
 Then ask: *"/showhow make a tutorial of how to create a project in https://app.example.com"*. On first use the agent runs `npm install` in the plugin folder.
 
+**Voice (optional).** For natural narration and generated music, add an [ElevenLabs](https://elevenlabs.io) key ([get one](https://elevenlabs.io/app/settings/api-keys)). Run this **in your own terminal**, not in the agent's chat, so the key never enters the conversation; the agent gives you the exact path:
+
+```bash
+node <showhow folder>/bin/showhow.js key      # asks for the key (hidden), checks it, saves it
+```
+
+It's saved to `~/.config/showhow/.env` (readable only by you), which survives plugin updates. An `ELEVENLABS_API_KEY` environment variable also works and takes precedence. Without a key, the free macOS voice is used (`voice: { provider: say }`); ElevenLabs bills per character, and narration is cached so re-runs cost nothing.
+
 **Codex**: the repo ships `.codex-plugin/plugin.json`; install it as a plugin from this repo. **Other agents** (Cursor, Gemini, Aider…): see [docs/other-agents.md](docs/other-agents.md).
 
 **As a CLI**, without an agent:
 
 ```bash
 git clone https://github.com/cberd1509/showhow && cd showhow && npm install
-cp .env.example .env    # optional: ELEVENLABS_API_KEY for natural voice and music
+node bin/showhow.js key   # optional: your ElevenLabs key, for natural voice and music
 
 node bin/showhow.js login --profile myapp https://app.example.com     # sign in by hand, close the window
 node bin/showhow.js probe examples/smoke/smoke.yaml                   # what's on screen
@@ -81,7 +89,13 @@ Recordings run in your own browser profile (`.profiles/`, git-ignored), signed i
 
 ## Credits
 
-Sound effects: [Kenney](https://kenney.nl) (CC0), curated via [/brag](https://github.com/latent-spaces/brag). Built on [Playwright](https://playwright.dev), [GSAP](https://gsap.com) and [Motion](https://motion.dev), installed from npm under their own licenses. Voice and music: [ElevenLabs](https://elevenlabs.io) (your key, your account).
+## Acknowledgements
+
+showhow owes its starting point to **[/brag](https://github.com/latent-spaces/brag)** by Shunit Haviv Hakimi (Latent Spaces, MIT): an agent that turns what you built into a polished, shareable video. Its storytelling and motion rules (show the real thing, be specific, keep it readable, make it alive) shaped the skill, which quotes them, and its curated sound set is where the sound effects here were picked from. showhow is a separate implementation: it contains no code from /brag. Motion guidance in the skill also draws on [HyperFrames](https://hyperframes.heygen.com/)' docs.
+
+## Credits
+
+Sound effects: [Kenney](https://kenney.nl) and unicae_games, all CC0; see [assets/CREDITS.md](assets/CREDITS.md). Built on [Playwright](https://playwright.dev), [GSAP](https://gsap.com) and [Motion](https://motion.dev), installed from npm under their own licenses. Voice and music: [ElevenLabs](https://elevenlabs.io) (your key, your account).
 
 ## License
 
