@@ -114,7 +114,7 @@ export class Runner {
     });
     await cdp.send('Page.startScreencast', {
       format: 'jpeg',
-      quality: 92,
+      quality: 95,
       maxWidth: Math.round(vp.width * vp.scale),
       maxHeight: Math.round(vp.height * vp.scale),
     });

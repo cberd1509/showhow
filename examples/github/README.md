@@ -5,11 +5,9 @@ go to Issues, filter by the `good first issue` label, open one, and read what ma
 reproduce, the labels, and any linked pull requests. It opens with a `kinetic` hook and closes with a `flow` recap.
 
 - `github.yaml`: the landscape tutorial (1920×1080)
-- `github.vertical.yaml`: the same steps and narration as a 9:16 cut (`extends` + `format: vertical`)
 
 ```sh
 node bin/showhow.js make examples/github/github.yaml
-node bin/showhow.js make examples/github/github.vertical.yaml
 ```
 
 Narration: Chris, an ElevenLabs featured voice, on Eleven v3 (about 1,000 characters). Output goes to

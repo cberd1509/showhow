@@ -1,0 +1,115 @@
+# Mossbit's first month at Juniper Studio, for the studio's leadership: the stakeholder video.
+# Audience: leadership deciding whether to keep Mossbit and tag every plant. Value: the plants are
+# healthier and their care is shared, at a glance, with no extra work.
+# Executive trailer: hook → reveal → value beats, each proven on the real app → numbers → how it
+# connects → the ask. Numbers are the demo workspace's own data (app/server.mjs, last 30 days):
+# 8 plants; 5 people; 42 waterings (14+11+8+6+3); 51 tag scans (sum of the hours); 212 happy
+# plant-days of 240 = 88%. Mossbit, Juniper Studio and everyone in it are fictional.
+title: Mossbit, one month in
+app: http://localhost:4173/app
+serve: { command: node app/server.mjs }
+profile: mossbit-stakeholders
+fresh: true
+style: trailer
+voice: { voice: XrExE9yKIg1WjnnlVkGX }   # Matilda (ElevenLabs featured), Eleven v3: calm and clear, for leadership
+music:
+  prompt: Warm, optimistic, understated corporate instrumental, soft piano and light marimba with gentle strings, steady medium tempo, hopeful, no vocals
+  volume: 0.22
+  duck: 4
+theme:
+  background: "#fff8ec"
+  background2: "#f3e9d4"
+  accent: "#4f9a52"
+  text: "#1e2a22"
+  font: Nunito, sans-serif
+  headingFont: Fredoka, Nunito, sans-serif
+  palette: ["#ffd166", "#e07a5f", "#7ccf5a", "#2f6b3f", "#7cc6e8"]
+  fonts: brand/fonts.css
+  backdrop: { shader: brand/dappled.frag }
+facts:
+  - { text: "8 plants, 5 people, 42 waterings, 51 scans, 88% happy plant-days in 30 days", source: "app/server.mjs (demo data)" }
+steps:
+  - id: hook
+    scene:
+      html: scenes/wilt.html
+      data:
+        line: A month ago, our plants were struggling.
+        notes: [{ text: "Did anyone water this?", cue: guessing }, { text: "I thought you did!", cue: twice }, { text: "Is it… plastic?", cue: never }]
+    say: A month ago, our plants were struggling. We were guessing, watering twice, or never.
+    do:
+      # Off camera: sign in to the demo workspace while the scene plays.
+      - goto: http://localhost:4173/login
+      - click: { role: button, name: Try the demo workspace }
+      - waitForUrl: "**/app"
+
+  - id: reveal
+    scene:
+      html: scenes/bit.html
+      data: { mode: reveal, word: mossbit, line: Now our plants tell us what they need., cue: tell }
+    say: So we tried Mossbit. Now our plants tell us what they need.
+
+  - id: glance
+    say: Every morning, one screen shows which plants need help, most urgent first.
+    do:
+      - goto: http://localhost:4173/app
+      - waitFor: { role: heading, name: Needs attention }
+      - highlight: { role: region, name: Needs attention }
+        sync: help
+
+  - id: anyone
+    scene:
+      html: scenes/phone.html
+      data: { mode: scan, plant: { kind: fern, name: Fernando }, qr: app/qr/fernando.svg, before: lifts/phone-thirsty.html, line: No app needed., cue: scan }
+    say: Anyone can help. Scan the tag on the pot. No app, no account.
+
+  - id: shared
+    say: And the care is shared. Five of us water now, not just whoever sits closest.
+    do:
+      - goto: http://localhost:4173/app/insights
+      - waitFor: { role: heading, name: Who keeps them alive }
+      - highlight: { role: region, name: Who keeps them alive }
+        sync: Five
+
+  - id: loved
+    say: People even leave them hearts. Monty in the lobby is the favourite.
+    do:
+      - highlight: { role: region, name: Most-loved plants }
+        sync: hearts
+
+  - id: numbers
+    scene:
+      html: showhow:stats
+      data:
+        kicker: The first 30 days
+        title: Healthier plants, shared care
+        highlight: healthier
+        items:
+          - { value: 88, suffix: "%", label: Happy plants, sub: on an average day, cue: happy }
+          - { value: 42, label: Waterings, sub: by 5 people, cue: waterings }
+          - { value: 51, label: Tag scans, sub: from the whole team, cue: scans }
+        note: Juniper Studio · 8 plants · last 30 days
+    say: In thirty days, our plants were happy eighty-eight percent of the time, with forty-two waterings and fifty-one scans.
+
+  - id: how
+    scene:
+      html: showhow:flow
+      data:
+        title: How it works
+        nodes:
+          - { id: tag, label: A tag on the pot, sub: one per plant, col: 0, kind: input, cue: tag }
+          - { id: scan, label: Anyone scans it, sub: no app, col: 1, cue: scans }
+          - { id: log, label: "\"I watered it\"", sub: one tap, col: 2, kind: core, cue: tap }
+          - { id: today, label: Today, sub: who needs help, col: 3, row: 0, kind: output, cue: Today }
+          - { id: insights, label: Insights, sub: "who cares, what's loved", col: 3, row: 1, kind: output, cue: Insights }
+        edges:
+          - { from: tag, to: scan }
+          - { from: scan, to: log }
+          - { from: log, to: today }
+          - { from: log, to: insights }
+    say: A tag on each pot. Anyone scans it, taps when they water, and Today and Insights update for everyone.
+
+  - id: close
+    scene:
+      html: scenes/bit.html
+      data: { mode: close, word: mossbit, line: "Next, a tag for every plant.", cue: Next }
+    say: Next, we'd like a tag on every plant in the studio.

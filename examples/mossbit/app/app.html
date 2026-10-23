@@ -68,6 +68,28 @@
   .loved div { display: flex; flex-direction: column; align-items: center; font-weight: 800; }
   .loved svg { width: 84px; height: 100px; }
   .loved span { color: var(--clay); }
+  /* Phones: one column, the sections as a tab bar along the bottom. */
+  @media (max-width: 700px) {
+    body { display: block; padding-bottom: 74px; }
+    aside { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; flex-direction: row; justify-content: space-around; padding: 6px 4px 10px; gap: 0; border-top: 1px solid var(--line); }
+    aside .logo, aside .me, aside a.nav[data-r="settings"] { display: none; }
+    aside a.nav { flex-direction: column; gap: 3px; padding: 6px 10px; font-size: 11px; }
+    aside a.nav.on { box-shadow: none; }
+    main { padding: 18px 16px; gap: 14px; }
+    .top { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .top h1 { font-size: 26px; }
+    .top .btn { display: none; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat { padding: 14px 16px; }
+    .stat b { font-size: 26px; }
+    .grid2, .ins, .hero { grid-template-columns: 1fr; gap: 14px; }
+    .plantgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .map { height: 210px; }
+    .hero .portrait { padding: 16px 10px 8px; }
+    .hero .portrait svg { width: 130px; height: 156px; }
+    .hero h1 { font-size: 32px; }
+    .tag .qr { width: 120px; height: 120px; }
+  }
 </style></head>
 <body>
 <aside>

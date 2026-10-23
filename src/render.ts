@@ -87,7 +87,7 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   const started = Date.now();
   for (let n = 0; n < total; n++) {
     await page.evaluate((s) => (window as any).draw(s), tl.state(n / FPS));
-    const jpg = await page.screenshot({ type: 'jpeg', quality: 92 });
+    const jpg = await page.screenshot({ type: 'jpeg', quality: 95 });
     if (!ff.stdin.write(jpg)) await new Promise((r) => ff.stdin.once('drain', r));
     if (n % (FPS * 10) === 0 && n) console.log(`render: ${(n / FPS).toFixed(0)}s (${((Date.now() - started) / n).toFixed(0)} ms/frame)`);
   }
@@ -128,7 +128,7 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   writeCaptions(tl, lines, out);
   embedChapters(tl, video);
   const setting = spec.output?.compress;
-  if (opts.compress ?? setting !== false) compress(video, path.join(out, 'work', 'master.mp4'), typeof setting === 'number' ? setting : 24);
+  if (opts.compress ?? setting !== false) compress(video, path.join(out, 'work', 'master.mp4'), typeof setting === 'number' ? setting : 20);
   writeGuide(spec, tl, shots, out);
   console.log(`render: done in ${((Date.now() - started) / 1000).toFixed(0)}s\n  ${video}\n  ${path.join(out, 'tutorial.srt')}\n  ${path.join(out, 'guide.md')}`);
 }

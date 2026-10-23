@@ -242,7 +242,9 @@ export class Timeline {
   private zoomOn(b: Box, fixed?: number): Cam {
     // A trailer frames the proof tighter: the element fills more of the shot.
     const fill = this.trailer ? 0.6 : 0.42;
-    const scale = fixed ?? Math.min(this.trailer ? 2.1 : MAX_ZOOM, Math.max(1, Math.min((fill * this.vis.w) / b.w, (fill * this.vis.h) / b.h)));
+    // A page recorded for a portrait window already fills it: the ring shows the target, no push-in.
+    const max = this.vis.h > this.vis.w ? 1 : this.trailer ? 2.1 : MAX_ZOOM;
+    const scale = fixed ?? Math.min(max, Math.max(1, Math.min((fill * this.vis.w) / b.w, (fill * this.vis.h) / b.h)));
     const hw = this.vis.w / (2 * scale);
     const hh = this.vis.h / (2 * scale);
     const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));

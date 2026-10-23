@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  showhow:terminal — a terminal session: commands typed, questions answered, output streaming in.
+  Replay what the command really prints (run it, or copy it from the docs): never invent output.
+
+  data:
+    kicker, title, highlight:   optional heading above the window
+    window:  the title bar text (e.g. "~/my-app — zsh")
+    lines:   in order, each one of
+      { cmd: "npm init playwright@latest", cue }        typed after the prompt ($)
+      { ask: "Do you want to use TypeScript or JavaScript?", answer: "TypeScript", cue }
+                                                         a CLI question, answered; shown as "✔ question · answer"
+      { out: "text", tone: dim | ok | accent | warn, cue }   output; consecutive `out` lines stream in together
+      { progress: "Downloading browsers", seconds: 1.6, cue }   a bar that fills, then stays as a done line
+      { blank: true }
+    cps:     typing speed (default 24 characters a second)
+  Lines without a cue follow the previous one. The window scrolls as the session grows.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: var(--text, #fff); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  #head { position: absolute; left: 150px; right: 150px; top: 80px; }
+  .kicker { display: inline-flex; align-items: center; gap: 12px; padding: 9px 18px; border-radius: 999px; font-size: 22px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+  h1 { font-family: var(--heading, var(--font)); margin-top: 18px; font-size: 60px; line-height: 1.05; letter-spacing: -.035em; font-weight: 750; }
+  h1 .hl { background: linear-gradient(100deg, var(--text, #fff) 10%, color-mix(in srgb, var(--accent) 55%, var(--text, #fff)) 60%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #win { position: absolute; border-radius: 18px; overflow: hidden; background: #0e1116; color: #e6edf3;
+    box-shadow: 0 50px 120px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08), 0 0 120px color-mix(in srgb, var(--accent) 22%, transparent); }
+  #bar { height: 46px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: #161b22; border-bottom: 1px solid #222a33; }
+  #bar i { width: 14px; height: 14px; border-radius: 50%; background: #ff5f57; } #bar i:nth-child(2) { background: #febc2e; } #bar i:nth-child(3) { background: #28c840; }
+  #bar span { flex: 1; text-align: center; margin-right: 66px; font: 600 17px var(--font); color: #8b949e; }
+  #view { position: absolute; left: 0; right: 0; top: 46px; bottom: 0; overflow: hidden; padding: 22px 30px; }
+  #log { font: 500 30px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+  .ln { min-height: 1.5em; }
+  .ps { color: var(--accent); font-weight: 700; }
+  .q { color: #58a6ff; font-weight: 700; } .ok { color: #3fb950; } .dim { color: #8b949e; } .accent { color: var(--accent); } .warn { color: #d29922; }
+  .ans { color: #e6edf3; font-weight: 700; }
+  .cursor { display: inline-block; width: .6em; height: 1.1em; margin-left: 2px; vertical-align: -.18em; background: #e6edf3; }
+  .pbar { display: inline-block; width: 12em; height: .7em; margin: 0 .6em; vertical-align: .05em; border-radius: 4px; background: #222a33; overflow: hidden; }
+  .pbar b { display: block; height: 100%; width: 0; background: var(--accent); }
+</style>
+</head>
+<body>
+<div id="head"></div>
+<div id="win"><div id="bar"><i></i><i></i><i></i><span></span></div><div id="view"><div id="log"></div></div></div>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.showhowTimeline = async ({ data, at, gsap, kit, duration }) => {
+    const W = innerWidth, H = innerHeight, VERT = H > W;
+    const hl = new Set((data.highlight || '').toLowerCase().split(/\s+/).filter(Boolean));
+    const head = document.getElementById('head');
+    if (VERT) Object.assign(head.style, { left: '80px', right: '80px', top: '170px' });
+    head.innerHTML = `${data.kicker ? `<div class="kicker">${esc(data.kicker)}</div>` : ''}${data.title ? `<h1>${data.title.split(/(\s+)/).map((w) => hl.has(w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')) ? `<span class="hl">${esc(w)}</span>` : esc(w)).join('')}</h1>` : ''}`;
+    document.querySelector('#bar span').textContent = data.window || 'Terminal';
+    const win = document.getElementById('win'), view = document.getElementById('view'), log = document.getElementById('log');
+    await kit.ready();
+
+    // The window fills the room under the heading, above the captions.
+    const top = data.title || data.kicker ? head.getBoundingClientRect().bottom + 40 : VERT ? 220 : 110;
+    const bottom = VERT ? 1470 : 850, side = VERT ? 60 : 180;
+    Object.assign(win.style, { left: `${side}px`, right: `${side}px`, top: `${top}px`, height: `${bottom - top}px` });
+    if (VERT) log.style.fontSize = '25px';
+
+    // Build every line now (hidden), then schedule each: typing, answering, streaming.
+    const cps = data.cps || 24;
+    const tl = gsap.timeline();
+    tl.from(win, { y: 60, opacity: 0, scale: 0.97, duration: 0.8, ease: 'expo.out' }, 0.05);
+    if (data.title || data.kicker) tl.from(head, { y: 24, opacity: 0, filter: 'blur(10px)', duration: 0.8, ease: 'expo.out' }, 0);
+    kit.sfx(0.1, 'slide', 0.18);
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    let t = 0.7;
+    const startAt = (l, fallback) => (l.cue ? Math.max(fallback, at(l.cue, fallback) - 0.1) : fallback);
+    const lines = data.lines || [];
+    const rows = [];
+    let scrolled = 0;
+    let shown = 0;
+    // Measure every line with its final text first (an answer can wrap a long question onto a
+    // second line), so the scroll keeps up with what will really be there.
+    const finalHTML = (l) => l.cmd ? `<span class="ps">$ </span>${esc(l.cmd)}`
+      : l.ask ? `<span class="ok">✔ </span>${esc(l.ask)} · <span class="ans">${esc(l.answer ?? '')}</span>`
+      : l.progress ? `<span class="dim">${esc(l.progress)}</span><span class="pbar"><b></b></span><span class="dim">100%</span>`
+      : l.blank ? '' : `<span>${esc(l.out ?? '')}</span>`;
+    const bottoms = lines.map((l) => {
+      const row = document.createElement('div');
+      row.className = 'ln';
+      row.innerHTML = finalHTML(l);
+      log.appendChild(row);
+      return row;
+    }).map((row) => row.offsetTop + row.offsetHeight);
+    log.innerHTML = '';
+    lines.forEach((l, i) => {
+      const row = document.createElement('div');
+      row.className = 'ln';
+      row.style.visibility = 'hidden';
+      log.appendChild(row);
+      rows.push(row);
+      if (l.cmd) {
+        row.innerHTML = '<span class="ps">$ </span><span class="tx"></span>';
+        const tx = row.querySelector('.tx');
+        t = startAt(l, t);
+        tl.set(row, { visibility: 'visible' }, t);
+        shown = t;
+        tl.call(() => tx.after(cursor), null, t);
+        tl.add(kit.typeOn(tx, l.cmd, { cps }), t + 0.15);
+        for (let k = 0; k < l.cmd.length; k += 3) kit.sfx(t + 0.15 + k / cps, 'tick', 0.08);
+        t += 0.15 + l.cmd.length / cps + 0.35;
+        kit.sfx(t - 0.2, 'select', 0.15);
+      } else if (l.ask) {
+        row.innerHTML = `<span class="q mark">? </span><span>${esc(l.ask)}</span> <span class="dim arrow">›</span> <span class="ans"></span>`;
+        const ans = row.querySelector('.ans');
+        t = startAt(l, t + 0.15);
+        tl.set(row, { visibility: 'visible' }, t);
+        shown = t;
+        tl.call(() => ans.after(cursor), null, t);
+        tl.add(kit.typeOn(ans, String(l.answer ?? ''), { cps: cps * 0.8 }), t + 0.6);
+        t += 0.6 + String(l.answer ?? '').length / (cps * 0.8) + 0.25;
+        // Answered: the mark turns into a check, the arrow into a dot, as prompt libraries show it.
+        tl.call(() => { row.querySelector('.mark').className = 'ok mark'; row.querySelector('.mark').textContent = '✔ '; row.querySelector('.arrow').textContent = '·'; }, null, t);
+        kit.sfx(t, 'pop', 0.14);
+        t += 0.2;
+      } else if (l.progress) {
+        const secs = l.seconds ?? 1.5;
+        row.innerHTML = `<span class="dim">${esc(l.progress)}</span><span class="pbar"><b></b></span><span class="dim pct">0%</span>`;
+        t = startAt(l, t + 0.1);
+        tl.set(row, { visibility: 'visible' }, t);
+        shown = t;
+        tl.call(() => cursor.remove(), null, t);
+        tl.to(row.querySelector('.pbar b'), { width: '100%', duration: secs, ease: 'power1.inOut' }, t);
+        tl.add(kit.count(row.querySelector('.pct'), 0, 100, { duration: secs, ease: 'power1.inOut', format: (v) => `${Math.round(v)}%` }), t);
+        t += secs + 0.15;
+      } else {
+        row.innerHTML = l.blank ? '' : `<span class="${l.tone || ''}">${esc(l.out ?? '')}</span>`;
+        // Output streams: a quick run of lines, not one at a time on the narration.
+        const prev = lines[i - 1];
+        t = l.cue ? startAt(l, t) : t + (prev && (prev.out !== undefined || prev.blank) ? 0.06 : 0.15);
+        tl.set(row, { visibility: 'visible' }, t);
+        shown = t;
+        // While a command prints, there is no cursor on the line it was typed on.
+        tl.call(() => cursor.remove(), null, t);
+      }
+      // Keep the newest line in view: scroll the log up as it grows past the window (layout is
+      // known now: hidden rows still take their place).
+      const over = bottoms[i] - (view.clientHeight - 44);
+      if (over > scrolled) { tl.to(log, { y: -over, duration: 0.25, ease: 'power2.out' }, shown); scrolled = over; }
+    });
+    // The cursor waits on a fresh prompt at the end, blinking.
+    const last = document.createElement('div');
+    last.className = 'ln';
+    last.innerHTML = '<span class="ps">$ </span>';
+    last.style.visibility = 'hidden';
+    log.appendChild(last);
+    tl.set(last, { visibility: 'visible' }, t + 0.2);
+    tl.call(() => last.appendChild(cursor), null, t + 0.2);
+    tl.to(cursor, { opacity: 0, duration: 0.01, repeat: Math.ceil(Math.max(1, duration - t) / 0.5), yoyo: true, repeatDelay: 0.5 }, t + 0.5);
+    tl.to({}, { duration: Math.max(0.1, duration - t) }, t);
+    return tl;
+  };
+</script>
+</body>
+</html>

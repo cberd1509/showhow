@@ -251,9 +251,46 @@
     const frame = $('scene');
     if (+frame.style.opacity > 0 && frame.contentDocument) look(frame.contentDocument, frame.contentWindow, 'scene');
     if (+$('card').style.opacity > 0) look(document, window, 'card');
-    return [...seen.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 4)
+    const out = [...seen.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n).slice(0, 4)
       .map((e) => `${e.where} uses ${e.v} (${e.n} elements${e.text ? `, e.g. "${e.text}"` : ''}), outside the palette: retint it or add it to theme.palette`);
+    if (+frame.style.opacity > 0 && frame.contentDocument) out.push(...faintText(frame.contentDocument, frame.contentWindow));
+    return out;
   };
+
+  // Text too faint to read: a scene's text against what is behind it (its nearest solid background,
+  // else the video's background), e.g. light-on-light from a scene written for a dark theme.
+  function faintText(doc, win) {
+    const rgba = (c) => { const m = c && c.match(/[\d.]+/g)?.map(Number); return m && m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+    const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+    const over = (top, under) => top.slice(0, 3).map((v, i) => v * top[3] + under[i] * (1 - top[3]));
+    const page = rgba(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() ? (() => { const i = document.createElement('i'); i.style.color = 'var(--bg)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; })() : 'rgb(0,0,0)');
+    const found = new Map();
+    for (const el of doc.querySelectorAll('body *')) {
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      const cs = win.getComputedStyle(el);
+      const fg = rgba(cs.color);
+      if (!fg || fg[3] < 0.05 || cs.visibility === 'hidden' || /text/.test(cs.backgroundClip + cs.webkitBackgroundClip)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      // Settled, fully shown text only: mid-fade text is faint on purpose.
+      let shown = 1, behind = null, unknown = false;
+      for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
+        const ac = win.getComputedStyle(a);
+        shown *= +ac.opacity;
+        if (!behind && ac.backgroundImage !== 'none') unknown = true;
+        const bg = rgba(ac.backgroundColor);
+        if (!behind && !unknown && bg && bg[3] >= 0.6) behind = over(bg, page);
+      }
+      if (shown < 0.95 || (unknown && !behind)) continue;
+      const back = behind || page;
+      const L1 = lum(over(fg, back)), L2 = lum(back);
+      const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+      if (ratio >= 3) continue;
+      const text = el.textContent.trim().slice(0, 30);
+      if (!found.has(text)) found.set(text, ratio);
+    }
+    return [...found].slice(0, 4).map(([text, ratio]) => `scene text "${text}" is hard to read (contrast ${ratio.toFixed(1)}:1, aim for 4.5): use var(--text) or a mix of it`);
+  }
 
   window.layoutIssues = () => {
     const CAPTION_TOP = G.captionTop, S = G.safe;
@@ -320,7 +357,10 @@
         // lines overlap there without touching. Allow that much, in proportion to the type.
         const fs = Math.min(parseFloat(frame.contentWindow.getComputedStyle(a.el).fontSize), parseFloat(frame.contentWindow.getComputedStyle(b.el).fontSize));
         const slack = Math.max(2, fs * 0.14);
-        const over = a.g.right > b.g.left + 2 && a.g.left < b.g.right - 2 && a.g.bottom > b.g.top + slack && a.g.top < b.g.bottom - slack;
+        // Line by line: text that wraps (an inline run over two lines) is two boxes, not their union.
+        const lines = (el) => { const r = doc.createRange(); r.selectNodeContents(el); return [...r.getClientRects()].filter((x) => x.width > 1); };
+        const hit = (p, q) => p.right > q.left + 2 && p.left < q.right - 2 && p.bottom > q.top + slack && p.top < q.bottom - slack;
+        const over = hit(a.g, b.g) && lines(a.el).some((p) => lines(b.el).some((q) => hit(p, q)));
         if (over) issues.push(`scene text collides: ${say(a.el)} and ${say(b.el)}`);
       }
     }
@@ -337,6 +377,8 @@
     h1.innerHTML = '';
     const hl = new Set((highlight || '').toLowerCase().split(/\s+/).filter(Boolean));
     title.split(/(\s+)/).forEach((w) => {
+      // Spaces stay plain text, so a wrapped line doesn't start with one.
+      if (!w.trim()) return void h1.append(' ');
       const span = document.createElement('span');
       span.textContent = w;
       if (hl.has(w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) span.className = 'hl';

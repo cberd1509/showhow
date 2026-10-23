@@ -31,14 +31,14 @@ flowchart LR
 - **Chapters** embedded in the MP4, as WebVTT, and as YouTube-ready timestamps.
 - **Animated cards and a designed poster**: aurora shader, word-by-word blur-in and springs from [motion.dev](https://motion.dev), the product tilted in 3D. Every frame is a pure function of time, so renders are deterministic.
 - **Lifted UI.** `{ lift: …, as: name }` copies a live element (after mocks) with its styles, fonts and images inlined; a `showhow:ui` scene animates it: tilt in, rows on their spoken word, check marks drawn, spotlights.
-- **Vertical format.** `format: vertical` renders 1080×1920; a vertical cut is `extends:` + `format: vertical`, sharing the narration (cached across specs).
+- **Vertical format.** `format: vertical` renders 1080×1920 and records the app at a narrow portrait viewport, so each page appears in its own mobile layout, never cropped from desktop footage. A vertical spec `extends:` the landscape one, overriding the steps that differ on a small screen; the shared narration is cached across specs.
 - **Motion graphics** between recorded steps: built-in `kinetic`, `ui`, `flow` (self-drawing diagrams with live pulses), `stats` (count-ups), `collage` (labelled real panels), `capabilities` and `media` scenes, or your own HTML with GSAP 3 (DrawSVG, MotionPath, SplitText…) on a timeline the render seeks frame by frame. Scenes cue on narration words and schedule their own sounds (curated Kenney CC0 set). `showhow scene <spec> <step>` previews one.
 - **The app's look**: probe reads its colours and fonts (embedded) for scenes that should match the product.
 - **Backdrops and brands**: eight built-in backdrops (aurora, mesh, grid, rays, waves, dots, grain, solid) or a brand's own GLSL shader; light or dark themes, a display font, a palette, and a check that warns about colours outside it. Characters can speak the narration (lip-sync from the voice's word timings), and scenes get motion.dev springs as well as GSAP.
 - **Three shapes**: a how-to tutorial, a deep-dive guide (chapters + a rich `guide.md`), or a stakeholder presentation (capabilities, how it fits, state in real numbers).
 - **Grounded**: every claim comes from the app, its docs, or facts the person gave (`facts:`, listed as sources in the guide); advice is labelled as a suggestion.
-- **Web-sized output**: `tutorial.mp4` is compressed (x264 CRF 24, chapters kept); the master stays in `work/`. `--no-compress` to skip.
-- **Variants** are small specs that `extends` the original (a translation, a vertical cut): see `examples/smoke/smoke.vertical.yaml`.
+- **Web-sized output**: `tutorial.mp4` is compressed (x264 CRF 20, chapters kept); the master stays in `work/`. `--no-compress` to skip.
+- **Variants** are small specs that `extends` the original (a translation, a vertical cut): see `examples/wikipedia/wikipedia.es.yaml` and `examples/mossbit/mossbit.vertical.yaml`.
 
 ## Install
 
@@ -72,7 +72,7 @@ node bin/showhow.js probe examples/smoke/smoke.yaml                   # what's o
 node bin/showhow.js make examples/smoke/smoke.yaml                    # voice + record + render
 ```
 
-`examples/smoke` records the Playwright docs (landscape and vertical) in about 180 characters of narration. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
+`examples/smoke` records the Playwright docs in about 180 characters of narration. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
 
 ## Requirements
 

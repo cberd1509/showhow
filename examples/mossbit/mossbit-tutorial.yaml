@@ -1,0 +1,85 @@
+# A Mossbit tutorial (the fictional app in app/): look after a thirsty plant, from the dashboard to the
+# pot and back. Audience: someone new at Juniper Studio. Value: in a minute you know how to find which
+# plant needs help, what it needs, and how the whole office sees that you helped.
+# Landscape only. Mossbit, Juniper Studio and everyone in it are fictional.
+title: Look after a thirsty plant
+app: http://localhost:4173/login
+serve: { command: node app/server.mjs }
+profile: mossbit-tutorial
+fresh: true
+voice: { voice: cgSgspJ2msm6clMCkdW9 }   # Jessica (ElevenLabs featured), Eleven v3
+theme:
+  background: "#fff8ec"
+  background2: "#f3e9d4"
+  accent: "#4f9a52"
+  text: "#1e2a22"
+  font: Nunito, sans-serif
+  headingFont: Fredoka, Nunito, sans-serif
+  palette: ["#ffd166", "#e07a5f", "#7ccf5a", "#2f6b3f", "#7cc6e8"]
+  fonts: brand/fonts.css
+  backdrop: { shader: brand/dappled.frag }
+steps:
+  - id: intro
+    card: { kicker: Mossbit tutorial, title: Look after a thirsty plant, highlight: thirsty plant, subtitle: "Find it, water it, and let the office know." }
+    say: Here's how to look after a thirsty plant with Mossbit.
+
+  - id: signin
+    title: Open your workspace
+    say: Open your workspace. Here, the demo one.
+    do:
+      - goto: http://localhost:4173/login
+      - click: { role: button, name: Try the demo workspace }
+        sync: demo
+      - waitForUrl: "**/app"
+
+  - id: attention
+    title: Check what needs attention
+    say: Today shows who needs help first. Fernando is thirsty, and has been for a while.
+    do:
+      - highlight: { role: region, name: Needs attention }
+        sync: help
+      - highlight: { role: link, name: Fernando }
+        sync: Fernando
+
+  - id: plant
+    title: See what it needs
+    say: Open Fernando to see how he likes it, when he was last watered, and the tag on his pot.
+    do:
+      - click: { role: link, name: Fernando }
+        sync: Open
+      - highlight: { text: Water every }
+        sync: likes
+      - highlight: { role: region, name: QR tag }
+        sync: tag
+
+  - id: scan
+    title: Scan the tag on the pot
+    scene:
+      html: scenes/phone.html
+      data: { mode: scan, plant: { kind: fern, name: Fernando }, qr: app/qr/fernando.svg, before: lifts/phone-thirsty.html, line: Scan the pot., cue: scan }
+    say: Anyone walking past can scan the tag on his pot. No account needed. Fernando says what he needs.
+
+  - id: water
+    title: Tap "I watered it"
+    scene:
+      html: scenes/phone.html
+      data: { mode: water, plant: { kind: fern, name: Fernando }, qr: app/qr/fernando.svg, before: lifts/phone-thirsty.html, after: lifts/phone-happy.html, button: I watered it, line: One tap., cue: tap }
+    say: Water him, then tap, I watered it.
+    do:
+      # Off camera, under the scene: the same tap on the real page, so the app shows it next.
+      - goto: http://localhost:4173/p/fernando
+      - click: { role: button, name: I watered it }
+
+  - id: log
+    title: Everyone sees it
+    say: Back in Mossbit, Fernando is happy again, and the care log shows who helped.
+    do:
+      - goto: http://localhost:4173/app/plants/fernando
+      - highlight: { text: Happy, exact: true }
+        sync: happy
+      - highlight: { role: region, name: Care log }
+        sync: helped
+
+  - id: outro
+    card: { title: That's it, bullets: [Check Today for who needs help, Scan the tag on the pot, "Tap \"I watered it\""] }
+    say: Check Today, scan the tag, and tap. Your plants will thank you.

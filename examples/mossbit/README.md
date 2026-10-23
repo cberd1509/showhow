@@ -1,12 +1,32 @@
-# Mossbit: a brand film
+# Mossbit: one product, every kind of video
 
-The flagship example: a 33-second launch film for **Mossbit**, a fictional office-plant-care app, in landscape and 9:16. It is the test of how far showhow goes with a brand that has a personality, not just colours.
+The flagship example: **Mossbit**, a fictional office-plant-care app, told three ways, each in landscape and 9:16. It is the test of how far showhow goes with a brand that has a personality, not just colours.
 
-- **One cast, from one source.** Bit (the mascot) and the plants are drawn by `app/faces.js`, which both the app and the video's scenes load: the characters in the film are the product's own.
-- **Characters that act.** Bit lands with squash and stretch and speaks the narration, lip-synced to the voice's word timings (`kit.lipsync`). Fernando the fern wilts while sticky notes pile up, then cheers up when he's watered.
-- **The real product in between.** The phone shows lifts of the plant's real page (taken at phone size), the dashboard is recorded, and the insights are lifted panels (`showhow:collage`).
-- **One brand everywhere.** `theme` sets the palette, Fredoka for headings and Nunito for text (`brand/fonts.css`, from `probe`), so cards, captions, built-in scenes and custom scenes match. The palette check passes on every scene.
-- **A local app.** `serve:` starts the demo server for probe and record; the sign-in happens off camera, behind the opening scene.
+| Video | Spec | For | Voice |
+|---|---|---|---|
+| **Launch trailer** (~40 s) | `mossbit.yaml`, `mossbit.vertical.yaml` | Anyone: the problem, Bit, the product, the tagline | Jessica |
+| **Stakeholder update** (~50 s) | `mossbit-stakeholders.yaml`, `.vertical.yaml` | Juniper Studio's leadership: the first month, in the app and in numbers, then the ask | Matilda |
+| **Tutorial** (~45 s) | `mossbit-tutorial.yaml`, `.vertical.yaml` | Someone new at the studio: find a thirsty plant, scan its tag, water it, see the office notice | Jessica |
+
+The vertical videos are recorded for vertical: the app at a phone-width viewport, in its own mobile layout (a tab bar, one column), never desktop footage cropped to a slice. All voices are ElevenLabs featured voices on Eleven v3.
+
+- **One cast, from one source.** Bit (the mascot) and the plants are drawn by `app/faces.js`, which both the app and the video's scenes load: the characters in the film are the product'## Run it
+
+```bash
+node ../../bin/showhow.js key                                     # once: an ElevenLabs key (voice + music)
+node ../../bin/showhow.js make mossbit.yaml                       # the launch trailer
+node ../../bin/showhow.js make mossbit-stakeholders.yaml          # the stakeholder update
+node ../../bin/showhow.js make mossbit-tutorial.yaml              # the tutorial
+node ../../bin/showhow.js make mossbit-tutorial.vertical.yaml     # any of them in 9:16: same narration (cached, free)
+```
+
+Narration: about 430 characters for the trailer, 690 for the stakeholder update and 530 for the tutorial; music about 40 and 50 seconds of ElevenLabs credits. To try the app itself: `node app/server.mjs` and open http://localhost:4173 (it has a phone layout too).
+
+The stakeholder numbers are the demo workspace's own data (`app/server.mjs`, last 30 days), worked out in the spec's header.
+
+`mossbit-phone.yaml` re-takes the phone lifts in `lifts/` if you change the plant page: `node ../../bin/showhow.js probe mossbit-phone.yaml --after page`, then copy `showhow-output/mossbit-phone/probe/lifts/*.html` into `lifts/`.
+
+serve:` starts the demo server for probe and record; the sign-in happens off camera, behind the opening scene.
 
 ## Run it
 
@@ -24,7 +44,7 @@ The narration is about 470 characters and the music about 40 seconds of ElevenLa
 
 | | |
 |---|---|
-| `mossbit.yaml`, `mossbit.vertical.yaml` | The film and its vertical cut |
+| `mossbit*.yaml` | The three videos, each with its vertical version |
 | `scenes/wilt.html` | The hook: the office plant nobody waters |
 | `scenes/bit.html` | Bit introduces Mossbit; the close |
 | `scenes/phone.html` | Scan the pot's tag; tap "I watered it" |
