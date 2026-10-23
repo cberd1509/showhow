@@ -57,7 +57,7 @@ Then ask: *"/showhow make a tutorial of how to create a project in https://app.e
 node <showhow folder>/bin/showhow.js key      # asks for the key (hidden), checks it, saves it
 ```
 
-It's saved to `~/.config/showhow/.env` (readable only by you), which survives plugin updates. An `ELEVENLABS_API_KEY` environment variable also works and takes precedence. Without a key, the free macOS voice is used (`voice: { provider: say }`); ElevenLabs bills per character, and narration is cached so re-runs cost nothing.
+It's saved to `~/.config/showhow/.env` (readable only by you), which survives plugin updates. An `ELEVENLABS_API_KEY` environment variable also works and takes precedence. Narration uses Eleven v3 and ElevenLabs' featured voices by default; ElevenLabs bills per character, and narration is cached so re-runs and vertical cuts cost nothing.
 
 **Codex**: the repo ships `.codex-plugin/plugin.json`; install it as a plugin from this repo. **Other agents** (Cursor, Gemini, Aider…): see [docs/other-agents.md](docs/other-agents.md).
 
@@ -72,11 +72,11 @@ node bin/showhow.js probe examples/smoke/smoke.yaml                   # what's o
 node bin/showhow.js make examples/smoke/smoke.yaml                    # voice + record + render
 ```
 
-`examples/smoke` records the Playwright docs (landscape and vertical) with the free macOS voice, no key needed. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
+`examples/smoke` records the Playwright docs (landscape and vertical) in about 180 characters of narration. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
 
 ## Requirements
 
-Node 23.6+ (runs TypeScript directly), Google Chrome, ffmpeg. macOS for the free `say` voice; anywhere with an ElevenLabs key.
+Node 23.6+ (runs TypeScript directly), Google Chrome, ffmpeg, and an ElevenLabs key (`showhow key`) for narration and music.
 
 ## Privacy
 
