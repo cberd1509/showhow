@@ -68,11 +68,13 @@ Then **write a short plan for the person** — audience, the one-sentence value,
 
 ## 2. Session
 
+Public pages need no session: leave `profile` out (it defaults to the app's hostname). If the app keeps state in the browser (a canvas, a cart, a dismissed welcome screen), set `fresh: true` so every probe and recording starts from an empty profile; otherwise what a probe left behind shows up in the recording.
+
 If the app needs sign-in, run `showhow login --profile <name> <app url> [other urls in the flow]` in the background and ask the person to sign in and close the window. Never type a password, read a one-time code, or automate sign-in. Every later command uses `profile: <name>` from the spec.
 
 ## 3. Discover the path
 
-Write a spec with just `title`, `app`, `profile` and no steps beyond the first `goto`, then explore:
+Write a spec with just `title`, `app`, `profile` (if signed in) and one step whose `do` is a `goto`, then explore:
 
 1. `showhow probe <spec>` → read the ARIA snapshot and look at the screenshot (Read the png).
 2. Pick the next action from what is actually there. Target by **role and accessible name**, exactly as the snapshot prints them (`{ role: link, name: Settings }`); fall back to `label`, `placeholder`, `text`, `testId`, then `css`.
@@ -80,7 +82,24 @@ Write a spec with just `title`, `app`, `profile` and no steps beyond the first `
 
 If Playwright MCP is available you may explore with it instead, but write every action you keep into the spec and re-verify with `probe`: the spec is what records.
 
-Things that break discovery: links with `target=_blank` open a tab — follow it with a `waitForUrl` at the head of the next step. Menus open on hover or click — probe after opening them. Lazy content — `waitFor` it.
+Things that break discovery: links with `target=_blank` open a tab — follow it with a `waitForUrl` at the head of the next step. Menus open on hover or click — probe after opening them. Lazy content — `waitFor` it: a menu often opens before its items load (typing into its filter too early finds nothing), so `waitFor` an item (`{ role: option }`) first. Probe runs fast, so a race that passes in `probe` can still fail in `record`, and the reverse: re-run `probe` when a step fails once.
+
+**Actions** (`do:`; `src/spec.ts` has the exact types). A target is `{ role, name }` (name is a case-insensitive substring unless `exact: true`), else `label`, `placeholder`, `text`, `testId`, `css`; `nth` picks a match other than the first.
+
+| Action | Does |
+|---|---|
+| `goto: <url>` | Opens a page (off the clock at the head of a step) |
+| `click: <target>` | Moves the pointer there and clicks, on the `sync` word |
+| `hover: <target>` | Moves the pointer there (menus that open on hover) |
+| `highlight: <target>`, `label:` | Rings it without clicking; the camera follows. Several in one step, each with its own `sync`, walk the ring across a screen |
+| `type: <text>`, `into: <target>` | Types into the target, or into whatever has focus |
+| `press: <key>` | A key or chord (`Enter`, `Escape`, `Shift+1`, `r`) |
+| `drag: <target>`, `from:`, `to:` | Presses and drags: draw on a canvas, move a card, a slider. `from`/`to` are points in the target's box as fractions (`{ x: 0.25, y: 0.5 }`, default the centre); `to` may be another target |
+| `scroll: <target>` | Scrolls it smoothly to the middle of the screen (do this before a far-down `click` or `highlight`, or the page jumps) |
+| `wait: <s>`, `waitFor: <target>`, `waitForUrl: <glob>` | Off the clock at the head of a step; on it anywhere else |
+| `lift: <target>`, `as:` | Copies an element for a scene (section 5c) |
+
+`sync` works on every action, keys and typing included: it starts on that word. The pointer moves to the centre of whatever it highlights, so tooltips and hover cards there will open: check the frames, and pick a target whose centre is calm if one covers what matters.
 
 ## 4. Privacy and mock data
 
@@ -130,6 +149,7 @@ steps:
 ```
 
 - **One step, one idea.** A step is a chapter, a guide heading and a screenshot. 4–9 steps.
+- **Quote text with commas in `{ … }`.** In a YAML flow mapping an unquoted comma ends the value: `{ title: Who edited it, and why? }` becomes the title "Who edited it" plus a stray key. Quote it (`title: "Who edited it, and why?"`); the loader warns when it sees this.
 - **Narration says what and why, in the app's own words.** Name controls exactly as labelled ("click **Add to Claude**"). Lead with the outcome when it isn't obvious. Two sentences at most per step. No filler ("simply", "just", "easy").
 - **`sync` the click to the word.** `sync: Settings` lands the cursor on Settings as the narrator says it.
 - **Setup is off the clock.** A step's leading `goto` / `waitForUrl` / `waitFor` / `wait` run before it starts and are cut from the video, so loading is never on screen.
@@ -140,11 +160,15 @@ steps:
 - **Cards** animate on their own (aurora background, words blurring in, bullets one by one). `highlight:` paints title words in the accent; `image: <step id>` puts that step's key moment beside the text, tilted, with its highlight ring (default: the nearest recorded step; `false` for none).
 - **Target what is visible.** Charts often carry an accessibility-only `table`; highlight the heading or the chart, not the hidden table.
 
+**The free voice.** `voice: { provider: say, voice: Samantha }` (macOS; `say -v '?'` lists voices, e.g. Paulina for Spanish) costs nothing, but returns no word timings: they are estimated from word length, so `sync`, `cue` and captions can land a little early, more so after commas and full stops. Fine for drafts and examples; sync to an early word in a sentence when it matters.
+
 **Music.** `music: { prompt: "...", volume: 0.28 }` composes an instrumental bed with ElevenLabs Music (cached per prompt, shared by every video and language that uses it), or `music: { file: bed.mp3 }`. It fades in and out and ducks under the voice; the mix is normalised to -16 LUFS. Describe a steady, unobtrusive bed: no build-ups, no drops, no vocals.
 
 **Pronunciation.** `voice.pronounce: { api.example.com: api dot example dot com }` — write the script and guide in the written form; only the voice hears the spoken one, and captions fold it back.
 
-**Other languages.** A translation is a small spec that `extends` the original and overrides by step id: `title`, `voice` (`language`, a native `voice`), each step's `title`/`say`/`card`, and per-action `sync`/`label` by position (`do: [{}, {}, { sync: servidor }]`). The app's UI keeps its language, so name controls as they read on screen. Narration lengths differ, so a translation is its own `make`.
+**Other languages.** A translation is a small spec that `extends` the original and overrides by step id: `title`, `app`, `voice` (`language`, a native `voice`), each step's `title`/`say`/`card`, and per-action `sync`/`label` by position (`do: [{}, {}, { sync: servidor }]`). The app's UI keeps its language, so name controls as they read on screen. Narration lengths differ, so a translation is its own `make`.
+
+How the merge works, so the override does what you mean: objects merge key by key, lists merge item by item **by position**, `null` deletes a key. So an override can change a `goto` URL or a target's `name` (`click: { name: Ver historial }` keeps the original's `role` and `exact`), but it cannot add or remove steps, actions or bullets: items past the original's length are dropped, and a different action kind is added beside the original, not swapped in. Give the original the structure every language needs (same steps, same actions), and if a localized site needs a different path, make that translation a standalone spec.
 
 **Every claim needs a source.** People will build on what a tutorial says, so separate what the product *does* from what you *suggest*:
 

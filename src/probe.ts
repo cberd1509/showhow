@@ -19,7 +19,7 @@ export async function probe(file: string, opts: { after?: string; url?: string; 
   const out = opts.out ? path.resolve(opts.out) : path.join(outputDir(file), 'probe');
   mkdirSync(out, { recursive: true });
 
-  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport });
+  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport, fresh: spec.fresh });
   try {
     const runner = new Runner(context, spec, { paced: false, liftDir: path.join(out, 'lifts') });
     await applyPrivacy(context, spec, dir, () => runner.step);

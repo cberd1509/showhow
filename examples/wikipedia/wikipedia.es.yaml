@@ -1,0 +1,60 @@
+# The same tutorial in Spanish, on es.wikipedia.org. `extends` merges by step id and, inside a step, action by
+# action in order: this file only overrides text, the article URL, the targets whose names differ on screen
+# ("Ver historial", "ant") and the words each action syncs to. Same steps, same order as wikipedia.yaml.
+extends: wikipedia.yaml
+title: Ver quién editó un artículo de Wikipedia
+app: https://es.wikipedia.org/wiki/Ada_Lovelace
+voice: { provider: say, voice: Paulina, language: es }
+steps:
+  - id: intro
+    card: { kicker: Wikipedia, title: ¿Quién editó este artículo y qué cambió?, highlight: qué cambió, subtitle: Dos clics. Sin cuenta. }
+    say: Cada artículo de Wikipedia guarda su historial completo. Así puedes ver quién lo editó y qué cambió.
+
+  - id: history
+    title: Abre Ver historial
+    say: Abre cualquier artículo, aquí Ada Lovelace, y haz clic en Ver historial, arriba a la derecha.
+    do:
+      - goto: https://es.wikipedia.org/wiki/Ada_Lovelace
+      - click: { name: Ver historial }
+        sync: Ver historial
+
+  - id: line
+    title: Lee una línea
+    say: Cada línea es una edición, de la más reciente a la más antigua. Cuándo se guardó, quién la guardó, cuántos bytes añadió o quitó, y el resumen del editor.
+    do:
+      - { sync: Cuándo, label: Cuándo }
+      - { sync: quién, label: Quién }
+      - { sync: bytes, label: Tamaño del cambio }
+      - { sync: resumen, label: Resumen de edición }
+    guide: |
+      Un número positivo en verde indica texto añadido; uno negativo en rojo, texto eliminado.
+      Una **m** marca una edición que su autor señaló como menor.
+
+  - id: prev
+    title: Compara con la versión anterior
+    say: Para ver qué cambió una edición, haz clic en ant, de anterior, junto a ella. Así la comparas con la versión justo antes.
+    do:
+      - click: { name: ant }
+        sync: ant
+
+  - id: sides
+    title: Antes y después
+    say: A la izquierda, la versión antes de la edición. A la derecha, la versión después, con quién guardó cada una.
+    do:
+      - { sync: izquierda, label: Antes }
+      - { sync: derecha, label: Después }
+
+  - id: changes
+    title: Encuentra el cambio
+    say: Abajo, las líneas eliminadas quedan a la izquierda y las añadidas a la derecha. Dentro de una línea cambiada, las palabras exactas aparecen marcadas.
+    do:
+      - {}
+      - { sync: eliminadas, label: Cambio }
+    guide: |
+      **Visual**, encima de la comparación, muestra lo mismo sobre la página ya formateada en lugar del wikitexto.
+
+  - id: outro
+    card:
+      title: Ese es el historial de un artículo
+      bullets: [Haz clic en Ver historial, "Lee una línea: cuándo, quién, tamaño, resumen", Haz clic en ant para ver el cambio]
+    say: Eso es todo. Ver historial muestra quién editó, y ant muestra qué cambió.

@@ -18,7 +18,7 @@ export async function record(file: string, opts: { headed: boolean }) {
   const out = path.join(outputDir(file), 'capture');
   rmSync(out, { recursive: true, force: true });
 
-  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport });
+  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport, fresh: spec.fresh });
   const runner = new Runner(context, spec, { paced: true, frameDir: path.join(out, 'frames'), liftDir: path.join(out, 'lifts') });
   try {
     await applyPrivacy(context, spec, dir, () => runner.step);

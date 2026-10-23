@@ -1,0 +1,117 @@
+# Who watches: someone who needs a quick diagram (for a doc, a ticket, a talk) and has never opened Excalidraw.
+# What they expect: to see a diagram appear, stroke by stroke, with the few keys that make it fast.
+# The value, in one sentence: two shapes, two labels and a connected arrow take under a minute, in the browser, with no account.
+# What would undermine it: a messy result, or steps the viewer can't repeat (every key used is shown on the toolbar).
+# Strategy: intro card, six recorded beats on a blank canvas, an outro card beside the finished diagram (the poster).
+#
+# `fresh: true` starts each run from an empty browser profile: Excalidraw keeps the canvas in the browser's
+# storage, so without it a probe's drawing would reappear in the recording. Drawing uses `drag` with points
+# as fractions of the canvas; shapes stay right of the style panel that opens on the left when one is selected.
+title: Sketch a quick diagram in Excalidraw
+app: https://excalidraw.com
+fresh: true
+voice: { provider: say, voice: Samantha, pronounce: { excalidraw.com: excalidraw dot com } }
+theme: { accent: "#6965db", background: "#121218" }
+poster: { image: fit }
+steps:
+  - id: intro
+    card: { kicker: Excalidraw, title: Sketch a quick diagram, highlight: diagram, subtitle: "Two shapes, two labels, one arrow. No account." }
+    say: Here's how to sketch a quick diagram in Excalidraw, in under a minute.
+
+  - id: open
+    title: Open a blank canvas
+    say: Open excalidraw.com. The canvas is ready, with no account needed, and the tools sit along the top.
+    do:
+      - goto: https://excalidraw.com
+      - waitFor: { role: button, name: Rectangle }
+      - highlight: { role: region, name: Shapes }
+        sync: tools
+        label: Tools
+    guide: |
+      The letter beside each tool is its shortcut: **R** rectangle, **O** ellipse, **A** arrow, **T** text.
+      Excalidraw keeps the drawing in your browser's storage; use the menu to save it to a file.
+
+  - id: box
+    title: Draw a box
+    say: Choose the rectangle, or press R, and drag out a box.
+    do:
+      - click: { role: button, name: Rectangle }
+        sync: rectangle
+      - drag: { css: canvas.interactive }
+        from: { x: 0.24, y: 0.4 }
+        to: { x: 0.42, y: 0.6 }
+        sync: drag
+
+  - id: label
+    title: Fill it and label it
+    say: While it's selected, pick a fill on the left. Then press Enter, and type a label.
+    do:
+      - click: { role: button, name: "#a5d8ff" }
+        sync: fill
+      - press: Enter
+        sync: Enter
+      - type: Idea
+        sync: type
+      - press: Escape
+
+  - id: ellipse
+    title: Add a second shape
+    say: Press O for an ellipse, drag it out, give it a fill, and label it the same way.
+    do:
+      - press: o
+        sync: O
+      - drag: { css: canvas.interactive }
+        from: { x: 0.62, y: 0.38 }
+        to: { x: 0.84, y: 0.62 }
+        sync: drag
+      - click: { role: button, name: "#ffec99" }
+        sync: fill
+      - press: Enter
+        sync: label
+      - type: Diagram
+      - press: Escape
+
+  - id: arrow
+    title: Connect them
+    say: Press A for an arrow, and drag from the box to the ellipse. Its ends attach to both shapes.
+    do:
+      - press: a
+        sync: A
+      - drag: { css: canvas.interactive }
+        from: { x: 0.43, y: 0.5 }
+        to: { x: 0.615, y: 0.5 }
+        sync: drag
+      - press: Escape
+
+  - id: move
+    title: Move a shape
+    say: Now move a shape, and the arrow follows.
+    do:
+      - drag: { css: canvas.interactive }
+        from: { x: 0.73, y: 0.5 }
+        to: { x: 0.73, y: 0.7 }
+        sync: move
+
+  # No pointer target here on purpose: the step's key moment is then its last frame, the finished
+  # diagram with nothing selected, which the outro card and the poster show.
+  - id: fit
+    title: Fit it on screen
+    say: Press Escape, then Shift and 1 to bring it all into view, and zoom in. There's your finished diagram.
+    do:
+      - press: Escape
+        sync: Escape
+      - press: Shift+1
+        sync: Shift
+      - press: Meta+Equal
+        sync: zoom
+      - press: Meta+Equal
+      - press: Meta+Equal
+    guide: |
+      **Shift+1** brings everything on the canvas into view; **Cmd/Ctrl and +** zooms in.
+
+  - id: outro
+    card:
+      title: A diagram in under a minute
+      highlight: diagram
+      bullets: ["R, O, A: rectangle, ellipse, arrow", Enter on a shape adds a label, Arrows stay attached as you move shapes]
+    say: Rectangle, ellipse, arrow, and a label on each. That's a diagram.

@@ -1,0 +1,86 @@
+# Who watches: a curious reader, a student or a new editor who wonders how a Wikipedia article came to say what it says.
+# What they expect: where the history lives, how to read one line of it, and how to see exactly what an edit changed.
+# The value, in one sentence: every change to an article is public; two clicks show who made it and what it was.
+# What would undermine it: pretending the list is fixed (it is live: the newest edit is whatever was saved last).
+# Strategy: an intro card, four recorded beats on public pages (no sign-in, nothing edited), a recap card.
+#
+# Live site: the newest edit changes all the time, so narration describes the parts of a line and of a diff,
+# never a particular edit. Editor names are public on Wikipedia's history pages; nothing here is private.
+# wikipedia.es.yaml translates this tutorial for es.wikipedia.org; keep step ids and action order in sync.
+title: See who edited a Wikipedia article
+app: https://en.wikipedia.org/wiki/Ada_Lovelace
+voice: { provider: say, voice: Samantha }
+theme: { accent: "#3366cc", background: "#101418" }
+poster: { image: sides }
+# Campaign and fundraising banners come and go above the article; they aren't part of the lesson.
+mock: { hide: ["#siteNotice"] }
+steps:
+  - id: intro
+    card: { kicker: Wikipedia, title: "Who edited this article, and what changed?", highlight: what changed, subtitle: Two clicks. No account needed. }
+    say: Every Wikipedia article keeps its full history. Here's how to see who edited it, and what they changed.
+
+  - id: history
+    title: Open View history
+    say: Open any article, here Ada Lovelace, and click View history, at the top right.
+    do:
+      - goto: https://en.wikipedia.org/wiki/Ada_Lovelace
+      - click: { role: link, name: View history }
+        sync: View history
+
+  - id: line
+    title: Read one line
+    say: Each line is one edit, newest first. When it was saved, who saved it, how many bytes it added or removed, and the editor's summary.
+    do:
+      - highlight: { css: "#pagehistory li a.mw-changeslist-date" }
+        sync: When
+        label: When
+      - highlight: { css: "#pagehistory li .history-user" }
+        sync: who
+        label: Who
+      - highlight: { css: "#pagehistory li .mw-diff-bytes:not(.history-size)" }
+        sync: bytes
+        label: Size of the change
+      - highlight: { css: "#pagehistory li .comment" }
+        sync: summary
+        label: Edit summary
+    guide: |
+      A positive number in green means text was added; a red negative number means text was removed.
+      An **m** marks an edit its author flagged as minor.
+
+  - id: prev
+    title: Compare with the previous version
+    say: To see what an edit changed, click prev, next to it. That compares it with the version just before.
+    do:
+      - click: { role: link, name: prev, exact: true }
+        sync: prev
+
+  - id: sides
+    title: Before and after
+    say: On the left, the version before the edit. On the right, the version after it, with who saved each one.
+    do:
+      - highlight: { css: "td.diff-otitle" }
+        sync: left
+        label: Before
+      - highlight: { css: "td.diff-ntitle" }
+        sync: right
+        label: After
+
+  - id: changes
+    title: Spot the change
+    say: Below, removed lines sit on the left and added lines on the right. Inside a changed line, the exact words are marked.
+    do:
+      # The first change, whatever the edit was: the marked words of a changed line, or else a whole
+      # line removed or added. A changed line can be a paragraph of wikitext; its marked words fit the shot.
+      - scroll: { css: ".diffchange, tr:not(:has(.diffchange)) > td.diff-deletedline, tr:not(:has(.diffchange)) > td.diff-addedline" }
+      - highlight: { css: ".diffchange, tr:not(:has(.diffchange)) > td.diff-deletedline, tr:not(:has(.diffchange)) > td.diff-addedline" }
+        sync: removed
+        label: Changed
+    guide: |
+      **Visual** above the diff shows the same comparison on the rendered page instead of the wikitext.
+
+  - id: outro
+    card:
+      title: That's an article's history
+      image: sides
+      bullets: [Click View history, "Read a line: when, who, size, summary", Click prev to see the change]
+    say: That's it. View history shows who edited, and prev shows what they changed.

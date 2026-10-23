@@ -16,14 +16,26 @@ export interface Target {
   nth?: number;
 }
 
+/** A point inside an element's box, as fractions of its width and height (0,0 is the top left). */
+export interface Point {
+  x: number;
+  y: number;
+}
+
 export type Action =
   | { goto: string }
   | { click: Target; sync?: string }
   | { hover: Target; sync?: string }
   | { highlight: Target; sync?: string; label?: string }
   | { type: string; into?: Target; sync?: string }
-  | { press: string }
+  | { press: string; sync?: string }
   | { scroll: Target; sync?: string }
+  /**
+   * Presses on the target and drags: on a canvas (draw a shape, connect two), a slider, a card to a column.
+   * `from`/`to` are points inside the target's box as fractions (0–1, default the centre); `to` may
+   * instead be another target, to drop on its centre. The pointer lands on `from` on the `sync` word.
+   */
+  | { drag: Target; from?: Point; to: Point | Target; sync?: string }
   | { wait: number }
   | { waitFor: Target }
   | { waitForUrl: string }
@@ -76,6 +88,11 @@ export interface Spec {
   profile?: string;
   /** A visible window. Needed for sites that turn headless browsers away. */
   headed?: boolean;
+  /**
+   * Start every probe and recording from an empty browser profile (no cookies, no site storage), for
+   * public apps that keep state in the browser: a canvas, a cart, a dismissed banner. Not with `login`.
+   */
+  fresh?: boolean;
   viewport?: { width: number; height: number; scale: number };
   voice?: {
     provider?: 'elevenlabs' | 'say';
@@ -140,13 +157,30 @@ export function loadSpec(file: string): { spec: Spec; dir: string } {
     if (ids.has(s.id)) throw new Error(`${file}: duplicate step id "${s.id}"`);
     ids.add(s.id);
   }
+  // An image that names no step would silently leave the card or poster without its picture.
+  const images = [...spec.steps.map((s) => s.card?.image), spec.poster?.image].filter((x): x is string => typeof x === 'string');
+  for (const image of images) if (!ids.has(image)) throw new Error(`${file}: image "${image}" is not a step id`);
   spec.viewport ??= DEFAULT_VIEWPORT;
   spec.profile ??= new URL(spec.app).hostname;
   return { spec, dir: path.dirname(path.resolve(file)) };
 }
 
+/**
+ * In a YAML flow mapping (`{ title: A, b }`) an unquoted comma ends the value: `b` becomes a key with no
+ * value and the text is silently cut. A null-valued key containing a space is almost always that.
+ */
+function warnCutText(node: unknown, file: string, at = '') {
+  if (Array.isArray(node)) return node.forEach((v, i) => warnCutText(v, file, `${at}[${i}]`));
+  if (typeof node !== 'object' || node === null) return;
+  for (const [k, v] of Object.entries(node)) {
+    if (v === null && /\s/.test(k)) console.warn(`${path.basename(file)}: "${k}" at ${at || 'top'} looks like text cut by an unquoted comma; quote the value`);
+    else warnCutText(v, file, at ? `${at}.${k}` : k);
+  }
+}
+
 function read(file: string): Spec {
   const own = parse(readFileSync(file, 'utf8')) as Spec;
+  warnCutText(own, file);
   if (!own.extends) return own;
   const base = read(path.resolve(path.dirname(file), own.extends));
   const { steps: overrides = [], extends: _, ...rest } = own;
@@ -166,7 +200,7 @@ function read(file: string): Spec {
 }
 
 export function actionKind(a: Action): string {
-  return Object.keys(a).find((k) => k !== 'sync' && k !== 'into' && k !== 'label' && k !== 'as')!;
+  return Object.keys(a).find((k) => !['sync', 'into', 'label', 'as', 'container', 'from', 'to'].includes(k))!;
 }
 
 export function actionTarget(a: Action): Target | undefined {
@@ -174,6 +208,7 @@ export function actionTarget(a: Action): Target | undefined {
   if ('hover' in a) return a.hover;
   if ('highlight' in a) return a.highlight;
   if ('scroll' in a) return a.scroll;
+  if ('drag' in a) return a.drag;
   if ('type' in a) return a.into;
   return undefined;
 }
