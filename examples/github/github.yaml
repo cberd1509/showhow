@@ -1,0 +1,116 @@
+# Who watches: a developer who wants to make a first open-source contribution and doesn't know where to start.
+# What they expect: the exact clicks to find beginner-friendly work in a big project, and how to tell if an issue is a good pick.
+# The value, in one sentence: maintainers already flag the work meant for newcomers; here is how to find it and read it.
+# What would undermine it: claiming an issue is "easy" (only the maintainers' label says so), or hiding that someone may already be on it.
+# Strategy: kinetic hook → five recorded beats on public pages (no sign-in) → a flow recap. Tutorial style, about a minute.
+#
+# Public pages only: nothing is starred, forked, commented or signed into. Live site: issue titles and
+# counts drift; if the chosen issue is closed, pick another from the filtered list and update `pick`.
+title: Find a good first issue on GitHub
+app: https://github.com/microsoft/vscode
+voice: { voice: iP95p4xoKVk53GoZ742B }   # Chris (ElevenLabs featured), Eleven v3
+theme: { accent: "#2da44e", background: "#0d1117", background2: "#161b22", palette: ["#58a6ff", "#a371f7"], backdrop: blueprint }
+poster: { kicker: Open source, title: Find a good first issue, highlight: good first issue, image: steps }
+steps:
+  - id: hook
+    scene:
+      html: showhow:kinetic
+      data:
+        kicker: Your first contribution
+        lines:
+          - { text: Big project., cue: big }
+          - { text: Where do you start?, cue: start }
+          - { text: A good first issue., accent: true, cue: good }
+    say: Want to contribute to a big open-source project, but don't know where to start? Look for a good first issue.
+
+  - id: issues
+    title: Open the Issues tab
+    say: Open the project on GitHub. Here, Visual Studio Code. Then go to Issues.
+    do:
+      - goto: https://github.com/microsoft/vscode
+      - click: { role: link, name: Issues }
+        sync: Issues
+
+  - id: labels
+    title: Filter by label
+    say: Maintainers tag work that suits newcomers. Open Labels, type good first, and pick good first issue.
+    do:
+      - waitFor: { role: button, name: Filter by labels }
+      - click: { role: button, name: Filter by labels }
+        sync: Labels
+      # Labels are searched as you type, after the menu has loaded its suggestions: typing earlier
+      # finds nothing, and the match takes a moment to arrive.
+      - waitFor: { role: option }
+      - wait: 1
+      - type: good first
+      - waitFor: { role: option, name: good first issue }
+      - click: { role: option, name: good first issue }
+        sync: pick
+      - press: Escape
+    guide: |
+      The same filter works in any repository: add `label:"good first issue"` to the issue search.
+      Many projects also use `help wanted` for work they'd welcome a pull request for.
+
+  - id: results
+    title: Read the short list
+    say: The search now reads label, good first issue. Thousands of open issues become a short list set aside for you.
+    do:
+      - highlight: { role: combobox, name: Search issues }
+        sync: label
+        label: label:"good first issue"
+
+  - id: pick
+    title: Pick one you understand
+    say: Choose one that matches what you know. This one is about Markdown cells in notebooks.
+    do:
+      - scroll: { role: link, name: Image stays broken when re-executing Markdown cell }
+      - click: { role: link, name: Image stays broken when re-executing Markdown cell }
+        sync: Markdown
+
+  - id: steps
+    title: Check it explains itself
+    say: A good first issue explains itself. Numbered steps to reproduce it, then the expected and the actual result.
+    do:
+      - waitFor: { role: heading, name: What happened? }
+      - highlight: { css: "[data-testid=markdown-body] ol" }
+        sync: Numbered
+        label: Steps to reproduce
+    guide: |
+      > **Suggestion:** before writing code, follow the steps yourself and confirm you see the same result.
+
+  - id: welcome
+    title: Read the labels
+    say: The labels confirm it. Good first issue, and help wanted, so the maintainers welcome a pull request.
+    do:
+      # The label links repeat in the activity feed; the sidebar section has no role of its own.
+      - highlight: { css: "[data-testid=sidebar-labels-section]" }
+        sync: Good first
+        label: Labels
+
+  - id: linked
+    title: See if someone's on it
+    say: Before you start, check the linked pull requests. Others may already be working on it, so read the thread and ask first.
+    do:
+      - highlight: { role: link, name: "Open #" }
+        sync: linked
+        label: Linked pull requests
+    guide: |
+      > **Suggestion:** leave a short comment saying what you plan to do and wait for a maintainer's reply. It saves you from duplicating someone else's work.
+
+  - id: recap
+    scene:
+      html: showhow:flow
+      data:
+        kicker: Recap
+        title: From Issues to your first pull request
+        highlight: first pull request
+        nodes:
+          - { id: issues, label: Issues, sub: The project's tab, col: 0, kind: input, cue: issues }
+          - { id: label, label: good first issue, sub: The label filter, col: 1, cue: label }
+          - { id: read, label: Clear steps, sub: Expected vs. actual, col: 2, cue: steps }
+          - { id: ask, label: "Ask, then code", sub: Your first pull request, col: 3, kind: output, cue: ask }
+        edges:
+          - { from: issues, to: label }
+          - { from: label, to: read }
+          - { from: read, to: ask }
+    say: So, open Issues, filter by the label, pick one with clear steps, and ask before you start. Then you're ready for your first pull request.

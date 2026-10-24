@@ -1,0 +1,100 @@
+# Install Playwright and run your first test: the whole flow, from the docs to a passing test and its report.
+# Audience: developers new to Playwright. Value: in about a minute you have a working test setup.
+# Facts come from playwright.dev/docs/intro and from running the commands for real in demo/
+# (npm init playwright@latest with its defaults; the example tests in Chromium; the HTML report).
+title: Install Playwright and run your first test
+app: https://playwright.dev
+fresh: true
+voice: { voice: XrExE9yKIg1WjnnlVkGX, pronounce: { playwright.dev: playwright dot dev } }   # Matilda (ElevenLabs featured), Eleven v3
+theme: { accent: "#2ead33", background: "#1b2129", background2: "#24302b", palette: ["#e2574c", "#3fb950"], backdrop: gradient }
+facts:
+  - { text: "npm init playwright@latest asks for TypeScript or JavaScript, a tests folder, a GitHub Actions workflow and whether to install browsers", source: "https://playwright.dev/docs/intro" }
+  - { text: "npx playwright show-report opens the HTML report", source: "https://playwright.dev/docs/intro" }
+steps:
+  - id: intro
+    card: { kicker: Playwright, title: Install Playwright and run your first test, highlight: first test, subtitle: From the docs to a passing test in about a minute. }
+    say: Here's how to install Playwright and run your first test.
+
+  - id: docs
+    title: Open the docs
+    say: Start on playwright.dev and open the Docs. The first page is the installation guide.
+    do:
+      - goto: https://playwright.dev
+      - click: { role: link, name: Docs, exact: true }
+        sync: Docs
+      - waitForUrl: "**/docs/intro"
+
+  - id: command
+    title: Copy the install command
+    say: The whole install is one command. Copy it.
+    do:
+      - highlight: { text: "npm init playwright@latest", exact: true }
+        sync: command
+      - click: { role: button, name: Copy code to clipboard }
+        sync: Copy
+
+  - id: init
+    title: Run it in your project
+    scene:
+      html: showhow:terminal
+      data:
+        window: "~/my-app — zsh"
+        lines:
+          - { cmd: "npm init playwright@latest", cue: Run }
+          - { out: "Getting started with writing end-to-end tests with Playwright:" }
+          - { out: "Initializing project in '.'", tone: dim }
+          - { ask: "Do you want to use TypeScript or JavaScript?", answer: TypeScript, cue: TypeScript }
+          - { ask: "Where to put your end-to-end tests?", answer: tests, cue: tests }
+          - { ask: "Add a GitHub Actions workflow? (Y/n)", answer: "false", cue: GitHub }
+          - { ask: "Install Playwright browsers (can be done manually via 'npx playwright install')? (Y/n)", answer: "true", cue: browsers }
+          - { out: "Installing Playwright Test (npm install --save-dev @playwright/test)…", tone: dim }
+          - { out: "Installing Types (npm install --save-dev @types/node)…", tone: dim }
+          - { out: "Writing playwright.config.ts.", tone: dim }
+          - { out: "Writing tests/example.spec.ts.", tone: dim }
+          - { out: "Downloading browsers (npx playwright install)…", tone: dim }
+          - { progress: "Chrome for Testing 156.0.8078.4", seconds: 0.35 }
+          - { progress: "Firefox 157.0", seconds: 0.35 }
+          - { progress: "WebKit 27.2", seconds: 0.35 }
+          - { out: "✔ Success! Created a Playwright Test project at ~/my-app", tone: ok }
+    say: Run it in your project. It asks four questions, TypeScript or JavaScript, where your tests go, a GitHub Actions workflow, and the browsers. Then it installs everything.
+
+  - id: run-docs
+    title: Find how to run the tests
+    say: Back in the guide, the next section shows how to run the example tests.
+    do:
+      - scroll: { role: heading, name: Running the Example Test }
+      - highlight: { text: "npx playwright test", exact: true }
+        sync: run
+
+  - id: test
+    title: Run the example tests
+    scene:
+      html: showhow:terminal
+      data:
+        window: "~/my-app — zsh"
+        lines:
+          - { cmd: "npx playwright test --project=chromium", cue: Run }
+          - { blank: true }
+          - { out: "Running 2 tests using 2 workers" }
+          - { blank: true }
+          - { out: "[1/2] [chromium] › tests/example.spec.ts:3:5 › has title", tone: dim }
+          - { out: "[2/2] [chromium] › tests/example.spec.ts:10:5 › get started link", tone: dim }
+          - { out: "  2 passed (2.9s)", tone: ok, cue: passing }
+          - { blank: true }
+          - { cmd: "npx playwright show-report", cue: Then }
+          - { out: "Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.", tone: dim }
+    say: Run the tests. Here, just in Chrome, two tests, both passing. Then open the report.
+
+  - id: report
+    title: Read the report
+    say: The report lists every test, with each step and how long it took.
+    do:
+      - goto: demo/playwright-report/index.html
+      - highlight: { role: link, name: has title }
+        sync: test
+      - click: { role: link, name: has title }
+        sync: step
+
+  - id: outro
+    card: { title: "You're set up", bullets: ["npm init playwright@latest", "npx playwright test", "npx playwright show-report"] }
+    say: That's it. Install, run, and read the report.

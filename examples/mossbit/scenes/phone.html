@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  A plant and a phone. scan: the phone scans the QR tag on the plant's stake and opens its page.
+  water: a tap on the page's button; water arcs onto the plant, which cheers up; the page updates.
+  data: mode, plant { kind, name }, qr, before, after (phone lifts), button (its label), line, cue
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: var(--text); font-family: var(--font); }
+  #line { position: absolute; font-family: var(--heading); font-weight: 600; font-size: 96px; letter-spacing: -.02em; line-height: 1; white-space: nowrap; }
+  #plant { position: absolute; width: 360px; transform-origin: 50% 100%; }
+  #plant .layer { position: absolute; left: 0; top: 0; }
+  #plant svg { width: 360px; height: 432px; }
+  #stake { position: absolute; left: 252px; top: 150px; width: 8px; height: 150px; border-radius: 4px; background: #c9a36b; transform-origin: 50% 100%; transform: rotate(10deg); }
+  #tag { position: absolute; left: -58px; top: -118px; width: 124px; padding: 10px; border-radius: 14px; background: #fffdf8; box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+  #tag img { display: block; width: 104px; height: 104px; }
+  #tag b { display: block; margin-top: 4px; text-align: center; font-family: var(--heading); font-weight: 600; font-size: 14px; color: #2f6b3f; }
+  #phone { position: absolute; width: 330px; height: 690px; padding: 13px; border-radius: 54px; background: #0b1610; box-shadow: 0 50px 110px rgba(0,0,0,.55), inset 0 0 0 2px #2a3a2f; }
+  #screen { position: relative; width: 100%; height: 100%; border-radius: 42px; overflow: hidden; background: #fff8ec; }
+  #screen > .page { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #cam { position: absolute; inset: 0; background: #1b2a20; display: flex; align-items: center; justify-content: center; }
+  #cam .vf { width: 190px; height: 190px; border-radius: 26px; box-shadow: 0 0 0 4px var(--accent) inset; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  #cam .vf img { width: 120px; height: 120px; background: #fffdf8; padding: 8px; border-radius: 8px; }
+  #cam .beam { position: absolute; left: 6px; right: 6px; height: 4px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
+  #notch { position: absolute; left: 50%; top: 22px; width: 96px; height: 28px; margin-left: -48px; border-radius: 16px; background: #0b1610; z-index: 3; }
+  #tap { position: absolute; width: 70px; height: 70px; margin: -35px; border-radius: 50%; border: 5px solid var(--accent); opacity: 0; z-index: 4; }
+  #bubble { position: absolute; padding: 18px 24px; border-radius: 26px 26px 26px 6px; background: #fffdf8; color: #1e2a22; font-family: var(--heading); font-weight: 600; font-size: 36px; white-space: nowrap; box-shadow: 0 14px 30px rgba(0,0,0,.3); }
+  .drop { position: absolute; width: 22px; height: 30px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #7cc6e8; box-shadow: inset -4px -4px 0 rgba(0,0,0,.08); }
+  .heart { position: absolute; font-size: 44px; color: var(--palette-2); }
+</style>
+</head>
+<body>
+<div id="line"></div>
+<div id="plant"><div id="stake"><div id="tag"><img alt=""><b></b></div></div></div>
+<div id="bubble"></div>
+<div id="phone"><div id="notch"></div><div id="screen"></div><div id="tap"></div></div>
+<script src="../app/faces.js"></script>
+<script>
+  window.showhowTimeline = async ({ data, at, gsap, kit, duration }) => {
+    const W = innerWidth, H = innerHeight, VERT = H > W, water = data.mode === 'water';
+    const M = window.Mossbit;
+    const plant = document.getElementById('plant'), phone = document.getElementById('phone'), screen = document.getElementById('screen');
+    const kind = data.plant.kind;
+    plant.insertAdjacentHTML('afterbegin', `<div class="layer sad">${M.plant({ kind, mood: 'thirsty', size: 360 })}</div><div class="layer glad" style="opacity:0">${M.plant({ kind, mood: 'happy', size: 360 })}</div>`);
+    plant.style.height = '432px';
+    const stake = document.getElementById('stake');
+    if (data.qr) { stake.querySelector('img').src = kit.asset(data.qr); stake.querySelector('b').textContent = data.plant.name; } else stake.style.display = 'none';
+
+    // The phone's page: a lift of the real plant page, scaled to the screen.
+    const page = (file) => {
+      const el = kit.lift(file);
+      const wrap = document.createElement('div');
+      wrap.className = 'page';
+      wrap.appendChild(el);
+      wrap.style.transform = `scale(${304 / parseFloat(el.style.width)})`;
+      screen.appendChild(wrap);
+      return wrap;
+    };
+    const before = page(data.before);
+    const after = data.after ? page(data.after) : null;
+    if (after) after.style.opacity = '0';
+    let cam;
+    if (!water) {
+      cam = document.createElement('div');
+      cam.id = 'cam';
+      cam.innerHTML = `<div class="vf"><img src="${kit.asset(data.qr)}"><i class="beam"></i></div>`;
+      screen.appendChild(cam);
+    }
+    const line = document.getElementById('line');
+    line.textContent = data.line;
+    const bubble = document.getElementById('bubble');
+    bubble.textContent = water ? 'Ahh, thank you!' : "I'm thirsty!";
+    await kit.ready();
+
+    // Layout: plant and phone side by side (landscape) or the plant above the phone (vertical).
+    const P = VERT ? { x: W / 2 - 180, y: 420 } : { x: 470, y: 330 };
+    const F = VERT ? { x: W / 2 - 165, y: 860 } : { x: 1110, y: 112 };
+    Object.assign(plant.style, { left: `${P.x}px`, top: `${P.y}px` });
+    Object.assign(phone.style, { left: `${F.x}px`, top: `${F.y}px` });
+    phone.style.transformOrigin = '50% 0';
+    phone.style.transform = VERT ? 'scale(.86)' : 'scale(1.1)';
+    Object.assign(line.style, VERT ? { left: '80px', right: '80px', top: '190px', textAlign: 'center', whiteSpace: 'normal' } : { left: '150px', top: '130px' });
+    Object.assign(bubble.style, VERT ? { left: `${P.x + 250}px`, top: `${P.y - 40}px` } : { left: `${P.x + 290}px`, top: `${P.y - 10}px` });
+
+    const tl = gsap.timeline();
+    tl.from(line, { y: 40, opacity: 0, filter: 'blur(10px)', duration: 0.8, ease: 'expo.out' }, 0.1);
+    // Water follows scan: the plant and the phone are already there, one continuous shot.
+    if (!water) tl.from(plant, { y: 120, opacity: 0, duration: 0.8, ease: 'back.out(1.5)' }, 0);
+    tl.to(plant, { rotate: -2, duration: 1.5, yoyo: true, repeat: Math.ceil(duration / 1.5), ease: 'sine.inOut' }, 0.8);
+    const sad = plant.querySelector('.sad svg'), glad = plant.querySelector('.glad svg');
+    kit.lipsync(tl, ({ blink }) => { M.setBlink(sad, blink); M.setBlink(glad, blink); });
+
+    if (!water) {
+      // The phone slides in, scans the tag (beam sweeps, a tick), and the plant's page opens.
+      tl.from(phone, VERT ? { y: 500, opacity: 0, duration: 0.9, ease: 'expo.out' } : { x: 500, opacity: 0, rotate: 8, duration: 0.9, ease: 'expo.out' }, 0.2);
+      kit.sfx(0.25, 'slide', 0.2);
+      tl.from(stake, { scaleY: 0, duration: 0.6, ease: 'back.out(2)' }, 0.5);
+      const beam = cam.querySelector('.beam');
+      const ts = Math.max(1.0, at(data.cue, 1.4) - 0.2);
+      tl.fromTo(beam, { top: 8 }, { top: 176, duration: 0.5, yoyo: true, repeat: 1, ease: 'sine.inOut' }, ts);
+      tl.to('#tag', { scale: 1.12, duration: 0.15, yoyo: true, repeat: 1 }, ts + 0.5);
+      kit.sfx(ts + 0.9, 'tick', 0.3);
+      tl.to(cam, { yPercent: -100, duration: 0.6, ease: 'expo.inOut' }, ts + 1.0);
+      tl.from(before, { y: 80, duration: 0.6, ease: 'expo.out' }, ts + 1.0);
+      kit.sfx(ts + 1.0, 'slide', 0.15);
+      // "…tells you how it's feeling": the plant says so.
+      const tb = Math.max(ts + 1.6, at('feeling', ts + 2.2) - 0.3);
+      tl.from(bubble, { scale: 0.3, opacity: 0, transformOrigin: '0% 100%', duration: 0.5, ease: 'back.out(2.2)' }, tb);
+      kit.sfx(tb, 'pop', 0.22);
+    } else {
+      // A tap on the button; water arcs from the phone to the plant; it cheers up; the page agrees.
+      const btn = [...before.querySelectorAll('button')].find((b) => b.textContent.includes(data.button));
+      const s = screen.getBoundingClientRect(), b = btn.getBoundingClientRect(), f = phone.getBoundingClientRect();
+      const tap = document.getElementById('tap');
+      Object.assign(tap.style, { left: `${b.left + b.width / 2 - f.left}px`, top: `${b.top + b.height / 2 - f.top}px` });
+      const tt = Math.max(0.9, at(data.cue, 1.4) - 0.15);
+      tl.fromTo(tap, { scale: 0.4, opacity: 1 }, { scale: 1.6, opacity: 0, duration: 0.6, ease: 'power2.out' }, tt);
+      tl.to(btn, { scale: 0.94, duration: 0.1, yoyo: true, repeat: 1 }, tt);
+      kit.sfx(tt, 'select', 0.3);
+      for (let i = 0; i < 7; i++) {
+        const d = document.createElement('i');
+        d.className = 'drop';
+        document.body.appendChild(d);
+        const x0 = b.left + b.width / 2, y0 = b.top;
+        const x1 = P.x + 120 + (i % 4) * 40, y1 = P.y + 60 + (i % 3) * 20;
+        const mid = { x: (x0 + x1) / 2, y: Math.min(y0, y1) - (VERT ? 160 : 260) };
+        tl.fromTo(d, { x: x0, y: y0, opacity: 0, scale: 0.6 }, { motionPath: { path: [{ x: x0, y: y0 }, mid, { x: x1, y: y1 }], curviness: 1.2 }, opacity: 1, scale: 1, duration: 0.8, ease: 'power1.in' }, tt + 0.15 + i * 0.06);
+        tl.to(d, { opacity: 0, duration: 0.15 }, tt + 0.95 + i * 0.06);
+      }
+      kit.sfx(tt + 0.9, 'drop', 0.25);
+      const tg = tt + 1.1;
+      tl.to(plant.querySelector('.glad'), { opacity: 1, duration: 0.35 }, tg);
+      tl.fromTo(plant, { scaleY: 0.9, scaleX: 1.08 }, { scaleY: 1, scaleX: 1, duration: 0.9, ease: 'elastic.out(1.2, 0.35)' }, tg);
+      tl.to(after, { opacity: 1, duration: 0.4 }, tg + 0.1);
+      tl.to(before, { opacity: 0, duration: 0.4 }, tg + 0.1);
+      kit.sfx(tg, 'success', 0.28);
+      for (let i = 0; i < 5; i++) {
+        const h = document.createElement('i');
+        h.className = 'heart';
+        h.textContent = '♥';
+        h.setAttribute('aria-hidden', 'true'); // decoration: not text to read
+        Object.assign(h.style, { left: `${VERT ? P.x - 20 + i * 45 : P.x + 60 + i * 60}px`, top: `${P.y + 40}px` });
+        document.body.appendChild(h);
+        tl.fromTo(h, { y: 0, opacity: 0, scale: 0.4 }, { y: VERT ? -70 - (i % 2) * 30 : -170 - (i % 2) * 50, opacity: 1, scale: 1, duration: 1.2, ease: 'power2.out' }, tg + 0.1 + i * 0.08);
+        tl.to(h, { opacity: 0, duration: 0.4 }, tg + 1.1 + i * 0.08);
+      }
+      tl.from(bubble, { scale: 0.3, opacity: 0, transformOrigin: '0% 100%', duration: 0.5, ease: 'back.out(2.2)' }, tg + 0.3);
+    }
+    return tl;
+  };
+</script>
+</body>
+</html>

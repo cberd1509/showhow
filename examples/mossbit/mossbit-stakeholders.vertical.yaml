@@ -1,0 +1,3 @@
+# The stakeholder video for vertical (9:16): recorded at a phone-width viewport, in the app's mobile layout.
+extends: mossbit-stakeholders.yaml
+format: vertical

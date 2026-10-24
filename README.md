@@ -4,11 +4,36 @@ Narrated tutorial videos, product trailers and step-by-step guides of any web ap
 
 You say "make a tutorial of how to invite a teammate in <your app>". The agent explores the app in a real browser, writes a short script (narration + actions), swaps private data for mock data, and `showhow` turns it into:
 
-- `tutorial.mp4` — 1080p, natural voice (ElevenLabs), a cursor that clicks on the word, a camera that zooms to the action, word-timed captions, click and key sounds
-- `tutorial.srt` / `.vtt`, `chapters.txt`
+- `<spec>.mp4` (named after the spec, or `output: { name }`) — 1080p, natural voice (ElevenLabs), a cursor that clicks on the word, a camera that zooms to the action, word-timed captions, click and key sounds
+- `<spec>.srt` / `.vtt`, `chapters.txt`, `poster.jpg`
 - `guide.md` with one screenshot per step (Tango/Scribe-style)
 
 Inspired by [/brag](https://github.com/latent-spaces/brag): the same idea of an agent owning the story, but tutorials need accuracy over hype, so the recording is real and the render is deterministic code.
+
+## Examples
+
+<p align="center"><img src="docs/media/mossbit.gif" width="720" alt="The opening of the Mossbit launch trailer: office plants on a shelf, sticky notes asking who watered them, then the mascot Bit landing beside the wordmark"></p>
+
+**Mossbit**, a fictional office-plant app with its own demo server ([`examples/mossbit`](examples/mossbit)), told as three kinds of video, each in landscape and 9:16. The posters link to the videos.
+
+| | Landscape | Vertical |
+|---|---|---|
+| **Launch trailer** (36 s)<br>The problem, the mascot, the product, the tagline. Characters lip-sync the voice. | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-trailer.mp4"><img src="docs/media/posters/mossbit-trailer.jpg" width="320" alt=""></a> | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-trailer-vertical.mp4"><img src="docs/media/posters/mossbit-trailer-vertical.jpg" width="120" alt=""></a> |
+| **Stakeholder update** (50 s)<br>The first month, shown in the app and in numbers from its data, then the ask. | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-stakeholders.mp4"><img src="docs/media/posters/mossbit-stakeholders.jpg" width="320" alt=""></a> | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-stakeholders-vertical.mp4"><img src="docs/media/posters/mossbit-stakeholders-vertical.jpg" width="120" alt=""></a> |
+| **Tutorial** (43 s)<br>Find a thirsty plant, scan its tag, water it, see the office notice. | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-tutorial.mp4"><img src="docs/media/posters/mossbit-tutorial.jpg" width="320" alt=""></a> | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/mossbit-tutorial-vertical.mp4"><img src="docs/media/posters/mossbit-tutorial-vertical.jpg" width="120" alt=""></a> |
+
+The vertical videos are recorded for vertical: the app in its own phone layout, not desktop footage cropped to a slice.
+
+<p align="center"><img src="docs/media/mossbit-tutorial-vertical.gif" width="240" alt="The vertical Mossbit tutorial: the app's phone layout, with the plant that needs water highlighted"> &nbsp; <img src="docs/media/playwright-terminal.gif" width="480" alt="A terminal scene typing npm init playwright@latest and answering its questions"></p>
+
+**Real public sites**, no sign-in. Each is a tutorial, landscape:
+
+| | |
+|---|---|
+| <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/playwright-install.mp4"><img src="docs/media/posters/playwright-install.jpg" width="400" alt=""></a><br>**Install Playwright and run your first test** (47 s). The docs, then the real `npm init playwright@latest` and test run replayed in a terminal scene, then the real HTML report. | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/github-good-first-issue.mp4"><img src="docs/media/posters/github-good-first-issue.jpg" width="400" alt=""></a><br>**Find a good first issue on GitHub** (66 s). Issues, the label filter, reading an issue, its linked pull request. |
+| <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/wikipedia-history.mp4"><img src="docs/media/posters/wikipedia-history.jpg" width="400" alt=""></a><br>**See who edited a Wikipedia article** (56 s), and [in Spanish](https://github.com/cberd1509/showhow/releases/download/examples-v1/wikipedia-history-es.mp4) from the same spec. | <a href="https://github.com/cberd1509/showhow/releases/download/examples-v1/excalidraw-diagram.mp4"><img src="docs/media/posters/excalidraw-diagram.jpg" width="400" alt=""></a><br>**Sketch a quick diagram in Excalidraw** (54 s). Drawing with drags, labels, arrows. |
+
+Each folder in [`examples/`](examples) has the spec and a README. Generated output isn't committed; the full videos are on the [examples release](https://github.com/cberd1509/showhow/releases/tag/examples-v1).
 
 ## How it works
 
@@ -19,7 +44,7 @@ flowchart LR
   C["<b>Voice</b><br/>ElevenLabs per step,<br/>with word timings"]
   D["<b>Record</b><br/>Chrome, your profile,<br/>mocks injected,<br/>paced by the voice"]
   E["<b>Render</b><br/>frame by frame:<br/>camera, cursor,<br/>captions, scenes"]
-  F["<b>Output</b><br/>tutorial.mp4, captions,<br/>chapters, guide.md"]
+  F["<b>Output</b><br/>the video, captions,<br/>chapters, guide.md"]
   A --> B --> C --> D --> E --> F
 ```
 
@@ -31,13 +56,15 @@ flowchart LR
 - **Chapters** embedded in the MP4, as WebVTT, and as YouTube-ready timestamps.
 - **Animated cards and a designed poster**: aurora shader, word-by-word blur-in and springs from [motion.dev](https://motion.dev), the product tilted in 3D. Every frame is a pure function of time, so renders are deterministic.
 - **Lifted UI.** `{ lift: …, as: name }` copies a live element (after mocks) with its styles, fonts and images inlined; a `showhow:ui` scene animates it: tilt in, rows on their spoken word, check marks drawn, spotlights.
-- **Vertical format.** `format: vertical` renders 1080×1920; a vertical cut is `extends:` + `format: vertical`, sharing the narration (cached across specs).
-- **Motion graphics** between recorded steps: built-in `kinetic`, `ui`, `flow` (self-drawing diagrams with live pulses), `stats` (count-ups), `collage` (labelled real panels), `capabilities` and `media` scenes, or your own HTML with GSAP 3 (DrawSVG, MotionPath, SplitText…) on a timeline the render seeks frame by frame. Scenes cue on narration words and schedule their own sounds (curated Kenney CC0 set). `showhow scene <spec> <step>` previews one.
+- **Vertical format.** `format: vertical` renders 1080×1920 and records the app at a narrow portrait viewport, so each page appears in its own mobile layout, never cropped from desktop footage. A vertical spec `extends:` the landscape one, overriding the steps that differ on a small screen; the shared narration is cached across specs.
+- **Motion graphics** between recorded steps: built-in `kinetic`, `ui`, `flow` (self-drawing diagrams with live pulses), `stats` (count-ups), `collage` (labelled real panels), `terminal` (a command typed, its prompts answered, output streaming), `capabilities` and `media` scenes, or your own HTML with GSAP 3 (DrawSVG, MotionPath, SplitText…) on a timeline the render seeks frame by frame. Scenes cue on narration words and schedule their own sounds (curated Kenney CC0 set). `showhow scene <spec> <step>` previews one.
 - **The app's look**: probe reads its colours and fonts (embedded) for scenes that should match the product.
+- **Backdrops and brands**: 23 built-in shader backdrops (gradient, liquid, lava, sunburst, blueprint, topo, bokeh, stars…), a brand's own GLSL shader, or any page; light or dark themes, a display font, a palette. Checks warn about colours outside the palette and text too faint to read. Characters can speak the narration (lip-sync from the voice's word timings).
+- **Libraries, called not copied**: `showhow add reactbits:Silk` or `showhow add hyperframes:<block>` installs a [React Bits](https://reactbits.dev) component or a [HyperFrames](https://hyperframes.heygen.com) block the way each library distributes it, to use as a scene or backdrop; scenes can import any npm library. A virtual clock (animation frames, timers, CSS and Web Animations, seeded randomness) renders their own code frame by frame.
 - **Three shapes**: a how-to tutorial, a deep-dive guide (chapters + a rich `guide.md`), or a stakeholder presentation (capabilities, how it fits, state in real numbers).
 - **Grounded**: every claim comes from the app, its docs, or facts the person gave (`facts:`, listed as sources in the guide); advice is labelled as a suggestion.
-- **Web-sized output**: `tutorial.mp4` is compressed (x264 CRF 24, chapters kept); the master stays in `work/`. `--no-compress` to skip.
-- **Variants** are small specs that `extends` the original (a translation, a vertical cut): see `examples/smoke/smoke.vertical.yaml`.
+- **Web-sized output**: the video is compressed (x264 CRF 20, chapters kept); the master stays in `work/`. `--no-compress` to skip.
+- **Variants** are small specs that `extends` the original (a translation, a vertical cut): see `examples/wikipedia/wikipedia.es.yaml` and `examples/mossbit/mossbit.vertical.yaml`.
 
 ## Install
 
@@ -50,13 +77,13 @@ flowchart LR
 
 Then ask: *"/showhow make a tutorial of how to create a project in https://app.example.com"*. On first use the agent runs `npm install` in the plugin folder.
 
-**Voice (optional).** For natural narration and generated music, add an [ElevenLabs](https://elevenlabs.io) key ([get one](https://elevenlabs.io/app/settings/api-keys)). Run this **in your own terminal**, not in the agent's chat, so the key never enters the conversation; the agent gives you the exact path:
+**Voice.** Narration and music use [ElevenLabs](https://elevenlabs.io): add a key ([get one](https://elevenlabs.io/app/settings/api-keys)). Run this **in your own terminal**, not in the agent's chat, so the key never enters the conversation; the agent gives you the exact path:
 
 ```bash
 node <showhow folder>/bin/showhow.js key      # asks for the key (hidden), checks it, saves it
 ```
 
-It's saved to `~/.config/showhow/.env` (readable only by you), which survives plugin updates. An `ELEVENLABS_API_KEY` environment variable also works and takes precedence. Without a key, the free macOS voice is used (`voice: { provider: say }`); ElevenLabs bills per character, and narration is cached so re-runs cost nothing.
+It's saved to `~/.config/showhow/.env` (readable only by you), which survives plugin updates. An `ELEVENLABS_API_KEY` environment variable also works and takes precedence. Narration uses Eleven v3 and ElevenLabs' featured voices by default; ElevenLabs bills per character, and narration is cached so re-runs and vertical cuts cost nothing.
 
 **Codex**: the repo ships `.codex-plugin/plugin.json`; install it as a plugin from this repo. **Other agents** (Cursor, Gemini, Aider…): see [docs/other-agents.md](docs/other-agents.md).
 
@@ -64,18 +91,18 @@ It's saved to `~/.config/showhow/.env` (readable only by you), which survives pl
 
 ```bash
 git clone https://github.com/cberd1509/showhow && cd showhow && npm install
-node bin/showhow.js key   # optional: your ElevenLabs key, for natural voice and music
+node bin/showhow.js key   # your ElevenLabs key, for the voice and music
 
 node bin/showhow.js login --profile myapp https://app.example.com     # sign in by hand, close the window
 node bin/showhow.js probe examples/smoke/smoke.yaml                   # what's on screen
 node bin/showhow.js make examples/smoke/smoke.yaml                    # voice + record + render
 ```
 
-`examples/smoke` records the Playwright docs (landscape and vertical) with the free macOS voice, no key needed. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
+`examples/smoke` records the Playwright docs in about 180 characters of narration. The spec format and the whole agent workflow are in [`skills/showhow/SKILL.md`](skills/showhow/SKILL.md).
 
 ## Requirements
 
-Node 23.6+ (runs TypeScript directly), Google Chrome, ffmpeg. macOS for the free `say` voice; anywhere with an ElevenLabs key.
+Node 23.6+ (runs TypeScript directly), Google Chrome, ffmpeg, and an ElevenLabs key (`showhow key`) for narration and music.
 
 ## Privacy
 

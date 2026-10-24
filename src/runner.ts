@@ -1,7 +1,7 @@
 import type { BrowserContext, CDPSession, Locator, Page } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { actionKind, actionTarget, type Action, type Spec, type Step, type Target } from './spec.ts';
+import { actionKind, actionTarget, type Action, type Point, type Spec, type Step, type Target } from './spec.ts';
 import { describe, locate } from './locate.ts';
 import { cardAround, liftElement } from './lift.ts';
 import { wordTime, type Line } from './voice.ts';
@@ -25,6 +25,7 @@ export interface Frame {
 }
 
 const MOVE_SECONDS = 0.55;
+const DRAG_SECONDS = 0.9;
 const STEP_TAIL = 0.6;
 const CARD_SECONDS = 2.8;
 
@@ -89,6 +90,11 @@ export class Runner {
       if (this.page === page && pages.length) void this.follow(pages[pages.length - 1]);
     });
     this.events.push({ type: 'page', url: page.url(), t: this.now() });
+    // A click that loads a new document in the same tab: boxes measured on the old page are stale,
+    // so the camera lets go of them instead of framing that spot on the new page.
+    page.on('domcontentloaded', () => {
+      if (this.page === page) this.events.push({ type: 'reset', t: this.now() });
+    });
     if (!this.frameDir) return;
     if (this.cdp && previous && !previous.isClosed()) await this.cdp.send('Page.stopScreencast').catch(() => {});
     const vp = this.spec.viewport!;
@@ -108,7 +114,7 @@ export class Runner {
     });
     await cdp.send('Page.startScreencast', {
       format: 'jpeg',
-      quality: 92,
+      quality: 95,
       maxWidth: Math.round(vp.width * vp.scale),
       maxHeight: Math.round(vp.height * vp.scale),
     });
@@ -160,12 +166,13 @@ export class Runner {
     const sync = 'sync' in a ? a.sync : undefined;
 
     // A pointer action arrives on its word; without one, it waits a beat so
-    // the narration gets ahead of the cursor rather than behind it.
-    if (this.opts.paced && actionTarget(a)) {
+    // the narration gets ahead of the cursor rather than behind it. A key press or typing with a
+    // `sync` starts on its word (no pointer travel to allow for).
+    if (this.opts.paced && (actionTarget(a) || sync)) {
       const spoken = sync ? wordTime(line, sync) : undefined;
       if (sync && spoken === undefined) console.warn(`  "${sync}" is not in the narration of ${step.id}`);
       const arrive = stepStart + (spoken ?? 0.7);
-      await sleep((arrive - MOVE_SECONDS - this.now()) * 1000);
+      await sleep((arrive - (actionTarget(a) ? MOVE_SECONDS : 0) - this.now()) * 1000);
     }
 
     switch (kind) {
@@ -222,9 +229,10 @@ export class Runner {
     if (!b) throw new Error(`${step.id}: ${describe(target)} has no box`);
     const box = { x: b.x, y: b.y, w: b.width, h: b.height };
     const label = 'label' in a ? a.label : undefined;
-    this.events.push({ type: 'target', step: step.id, kind, box, t: this.now(), label });
+    if (kind !== 'drag') this.events.push({ type: 'target', step: step.id, kind, box, t: this.now(), label });
 
-    await this.moveTo({ x: box.x + box.w / 2, y: box.y + box.h / 2 });
+    const at = (p?: Point) => ({ x: box.x + box.w * (p?.x ?? 0.5), y: box.y + box.h * (p?.y ?? 0.5) });
+    await this.moveTo(kind === 'drag' ? at((a as { from?: Point }).from) : at());
     if (kind === 'click' || kind === 'type') {
       await page.mouse.down();
       await sleep(70);
@@ -232,11 +240,36 @@ export class Runner {
       this.events.push({ type: 'click', at: { ...this.cursor }, t: this.now() });
       await sleep(this.opts.paced ? 250 : 50);
     }
+    if (kind === 'drag') await this.drag(a as { drag: Target; from?: Point; to: Point | Target }, at, step);
     if (kind === 'type') await this.type((a as { type: string }).type);
     if (kind === 'highlight') {
       this.tracked = { loc, step: step.id, label, box };
       if (this.opts.paced) await sleep(400);
     }
+  }
+
+  /** Mouse down where the pointer is, a slow eased move to `to`, mouse up. */
+  private async drag(a: { to: Point | Target }, at: (p?: Point) => Pt, step: Step) {
+    let to: Pt;
+    if ('x' in a.to && typeof a.to.x === 'number') to = at(a.to as Point);
+    else {
+      const b = await locate(this.page, a.to as Target).boundingBox();
+      if (!b) throw new Error(`${step.id}: drag target ${describe(a.to as Target)} has no box`);
+      const vp = this.page.viewportSize();
+      if (vp && (b.y < 0 || b.x < 0 || b.y + b.height > vp.height || b.x + b.width > vp.width)) throw new Error(`${step.id}: drag target ${describe(a.to as Target)} is off screen: scroll first (a \`scroll\` action) so both ends of the drag are visible`);
+      to = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    }
+    // The camera frames the stroke, not the whole element it happens on (a canvas fills the page).
+    const from = { ...this.cursor };
+    const pad = 60;
+    const x = Math.min(from.x, to.x) - pad, y = Math.min(from.y, to.y) - pad;
+    this.events.push({ type: 'target', step: step.id, kind: 'drag', box: { x, y, w: Math.abs(to.x - from.x) + 2 * pad, h: Math.abs(to.y - from.y) + 2 * pad }, t: this.now() });
+    await this.page.mouse.down();
+    this.events.push({ type: 'click', at: { ...from }, t: this.now() });
+    // Unpaced too, in steps: drawing apps need the points in between.
+    await this.moveTo(to, DRAG_SECONDS, 12);
+    await this.page.mouse.up();
+    await sleep(this.opts.paced ? 250 : 80);
   }
 
   /** Re-measures the tracked element; a move becomes a new target event the ring and camera follow. */
@@ -268,18 +301,17 @@ export class Runner {
     throw new Error(`no tab reached ${pattern}; open: ${this.context.pages().map((p) => p.url()).join(', ')}`);
   }
 
-  private async moveTo(to: Pt) {
+  /** An eased move to `to`: over `seconds` when paced, else in `unpacedSteps` quick steps. */
+  private async moveTo(to: Pt, seconds = MOVE_SECONDS, unpacedSteps = 1) {
     const from = { ...this.cursor };
     const t0 = this.now();
-    if (this.opts.paced) {
-      // Real moves, so the app's own hover states show up in the capture.
-      const n = Math.round(MOVE_SECONDS * 60);
-      for (let k = 1; k <= n; k++) {
-        const e = ease(k / n);
-        await this.page.mouse.move(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e);
-        await sleep(1000 / 60);
-      }
-    } else await this.page.mouse.move(to.x, to.y);
+    // Real moves, so the app's own hover states show up in the capture.
+    const n = this.opts.paced ? Math.round(seconds * 60) : unpacedSteps;
+    for (let k = 1; k <= n; k++) {
+      const e = ease(k / n);
+      await this.page.mouse.move(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e);
+      if (n > 1) await sleep(this.opts.paced ? 1000 / 60 : 10);
+    }
     this.cursor = to;
     this.events.push({ type: 'move', from, to, t0, t1: this.now() });
   }

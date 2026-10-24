@@ -1,7 +1,8 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { activePage, applyPrivacy, launch } from './browser.ts';
-import { loadSpec } from './spec.ts';
+import { withServer } from './serve.ts';
+import { loadSpec, type Spec } from './spec.ts';
 import { outputDir } from './paths.ts';
 import { readLines } from './voice.ts';
 import { Runner } from './runner.ts';
@@ -14,11 +15,15 @@ export interface Capture {
 
 export async function record(file: string, opts: { headed: boolean }) {
   const { spec, dir } = loadSpec(file);
+  return withServer(spec, dir, () => recordNow(file, spec, dir, opts));
+}
+
+async function recordNow(file: string, spec: Spec, dir: string, opts: { headed: boolean }) {
   const lines = readLines(file);
   const out = path.join(outputDir(file), 'capture');
   rmSync(out, { recursive: true, force: true });
 
-  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport });
+  const context = await launch({ profile: spec.profile!, headless: !(opts.headed || spec.headed), viewport: spec.viewport, fresh: spec.fresh });
   const runner = new Runner(context, spec, { paced: true, frameDir: path.join(out, 'frames'), liftDir: path.join(out, 'lifts') });
   try {
     await applyPrivacy(context, spec, dir, () => runner.step);

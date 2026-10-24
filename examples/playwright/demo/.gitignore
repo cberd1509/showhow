@@ -1,0 +1,8 @@
+# The HTML report is kept: the example video records it.
+
+# Playwright
+node_modules/
+/test-results/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

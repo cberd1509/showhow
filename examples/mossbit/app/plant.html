@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Mossbit</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { min-height: 100vh; display: flex; flex-direction: column; background: var(--cream); }
+  header { display: flex; justify-content: center; padding: 16px 0 0; }
+  header .logo { font-size: 18px; }
+  .stage { position: relative; display: flex; justify-content: center; padding: 20px 0 6px; }
+  .stage:before { content: ''; position: absolute; top: 40px; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, #e4f5da 0%, transparent 70%); }
+  .stage svg { position: relative; width: 200px; height: 240px; transition: transform .5s cubic-bezier(.3, 1.6, .5, 1); }
+  .stage.joy svg { transform: translateY(-8px) scale(1.04); }
+  .card { margin: 0 18px; text-align: center; }
+  h1 { font-size: 32px; }
+  .species { color: var(--muted); font-weight: 700; font-size: 14px; margin: 2px 0 14px; }
+  .bubble { position: relative; background: var(--sand); border-radius: 18px; padding: 14px 16px; font-weight: 700; font-size: 17px; line-height: 1.35; }
+  .bubble:before { content: ''; position: absolute; top: -8px; left: 50%; margin-left: -9px; border: 9px solid transparent; border-top: 0; border-bottom-color: var(--sand); }
+  .actions { display: flex; flex-direction: column; gap: 10px; margin: 18px; }
+  .actions .btn { justify-content: center; padding: 15px; font-size: 17px; }
+  .tip { margin: 0 18px; padding: 14px 16px; border-radius: 16px; background: #fff; display: flex; gap: 12px; align-items: center; font-weight: 700; font-size: 14px; text-align: left; box-shadow: 0 1px 0 var(--line); }
+  .tip b { display: block; color: var(--deep); }
+  footer { margin-top: auto; padding: 22px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .toast { position: fixed; left: 18px; right: 18px; bottom: 22px; padding: 14px 16px; border-radius: 16px; background: var(--forest); color: var(--cream); font-weight: 800; display: flex; gap: 10px; align-items: center; transform: translateY(calc(100% + 40px)); transition: transform .4s cubic-bezier(.3, 1.5, .5, 1); }
+  .toast.on { transform: none; }
+</style></head>
+<body>
+  <header><span class="logo"><span id="mini"></span>mossbit</span></header>
+  <div class="stage" id="stage"></div>
+  <div class="card" style="background:none;box-shadow:none;padding:0">
+    <h1 id="name"></h1><div class="species" id="species"></div>
+    <div class="bubble" id="say"></div>
+  </div>
+  <div class="actions"><button class="btn leaf" id="water">💧 I watered it</button><button class="btn ghost">Something looks wrong</button></div>
+  <div class="tip" id="tip"></div>
+  <footer>Plant care by mossbit · Juniper Studio</footer>
+  <div class="toast" id="toast"></div>
+<script src="/faces.js"></script>
+<script>
+  const id = location.pathname.split('/')[2];
+  const days = (iso) => Math.round((Date.now() - new Date(iso)) / 86400000);
+  document.getElementById('mini').innerHTML = Mossbit.bit({ size: 26 });
+  function show(p) {
+    document.getElementById('stage').innerHTML = Mossbit.plant({ kind: p.kind, mood: p.mood, size: 200 });
+    document.getElementById('name').textContent = `Hi, I'm ${p.name}!`;
+    document.getElementById('species').textContent = `${p.species} · ${p.spot}`;
+    const d = days(p.lastWatered);
+    document.getElementById('say').textContent = p.mood === 'thirsty'
+      ? `I'm a little thirsty. My last drink was ${d} days ago.`
+      : d === 0 ? `Ahh, that's better. Thank you!` : `I'm feeling great. ${p.carer.name.split(' ')[0]} watered me ${d === 1 ? 'yesterday' : d + ' days ago'}.`;
+    document.getElementById('tip').innerHTML = `<span style="font-size:24px">☀️</span><span><b>How I like it</b>${p.light}. Water every ${p.every} days.</span>`;
+  }
+  fetch(`/api/plants/${id}`).then((r) => r.json()).then(show);
+  document.getElementById('water').onclick = async () => {
+    const p = await fetch(`/api/plants/${id}/water`, { method: 'POST' }).then((r) => r.json());
+    show(p);
+    document.getElementById('stage').classList.add('joy');
+    const t = document.getElementById('toast');
+    t.innerHTML = `${Mossbit.bit({ size: 30 })} Thanks! ${p.name} feels better.`;
+    t.classList.add('on');
+  };
+</script>
+</body></html>

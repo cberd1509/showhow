@@ -4,17 +4,19 @@ import path from 'node:path';
 const USAGE = `showhow — narrated tutorial videos of any web app
 
   showhow login --profile <name> <url...>    Sign in by hand; the profile is reused by every run
-  showhow probe <tutorial.yaml> [--after <step>] [--url <url>] [--out <dir>]
+  showhow probe <spec.yaml> [--after <step>] [--url <url>] [--out <dir>]
                                              Replay steps fast, then dump what is on screen:
                                              ARIA snapshot, screenshot, JSON requests
-  showhow voice <tutorial.yaml>              Generate narration (cached per line)
-  showhow record <tutorial.yaml> [--headed]  Drive the app, paced by the narration
-  showhow scene <tutorial.yaml> <step>      One scene alone: a sheet of stills, its sounds, the layout check
-  showhow render <tutorial.yaml> [--no-compress]
+  showhow voice <spec.yaml>              Generate narration (cached per line)
+  showhow record <spec.yaml> [--headed]  Drive the app, paced by the narration
+  showhow scene <spec.yaml> <step>      One scene alone: a sheet of stills, its sounds, the layout check
+  showhow render <spec.yaml> [--no-compress]
                                              Compose the video, captions and guide; compressed for the web
                                              unless --no-compress (the master stays in work/ either way)
-  showhow make <tutorial.yaml> [--headed] [--no-compress]
+  showhow make <spec.yaml> [--headed] [--no-compress]
                                              voice + record + render
+  showhow add <reactbits:Name | hyperframes:name> [--to vendor]
+                                             Install a library's component next to the spec, for a scene or backdrop
   showhow key [--status | --remove]          Save your ElevenLabs key (asked with hidden input, in your own
                                              terminal) to ~/.config/showhow/.env; --status says if one is set
 
@@ -31,6 +33,7 @@ const { positionals, values } = parseArgs({
     out: { type: 'string' },
     headed: { type: 'boolean', default: false },
     status: { type: 'boolean' },
+    to: { type: 'string' },
     remove: { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -40,6 +43,10 @@ const [command, ...rest] = positionals;
 
 async function main() {
   switch (command) {
+    case 'add': {
+      const { add } = await import('./add.ts');
+      return add(rest[0], values.to);
+    }
     case 'key': {
       const { key } = await import('./key.ts');
       return key({ status: values.status, remove: values.remove });
@@ -83,7 +90,7 @@ async function main() {
 }
 
 function need(file: string | undefined): string {
-  if (!file) throw new Error('missing <tutorial.yaml>');
+  if (!file) throw new Error('missing <spec.yaml>');
   return path.resolve(file);
 }
 

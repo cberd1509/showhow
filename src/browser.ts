@@ -1,5 +1,6 @@
 import { chromium, type BrowserContext, type Page } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { Spec } from './spec.ts';
 import { mockInitScript } from './mock.ts';
@@ -21,10 +22,12 @@ export interface LaunchOptions {
   profile: string;
   headless: boolean;
   viewport?: { width: number; height: number; scale: number };
+  /** A throwaway profile: nothing (cookies, site storage) carries over from one run to the next. */
+  fresh?: boolean;
 }
 
 export async function launch(opts: LaunchOptions): Promise<BrowserContext> {
-  const dir = path.join(PROFILES_DIR, opts.profile);
+  const dir = opts.fresh ? mkdtempSync(path.join(os.tmpdir(), 'showhow-')) : path.join(PROFILES_DIR, opts.profile);
   mkdirSync(dir, { recursive: true });
   const vp = opts.viewport;
   const context = await chromium.launchPersistentContext(dir, {
@@ -37,6 +40,8 @@ export async function launch(opts: LaunchOptions): Promise<BrowserContext> {
     colorScheme: 'light',
     locale: 'en-US',
   });
+  // Chrome may still be flushing the profile as it closes: retry, and never fail a run over a temp dir.
+  if (opts.fresh) context.on('close', () => { try { rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {} });
   // Headless Chrome announces itself in the UA; some sites refuse it.
   if (opts.headless) {
     const page = context.pages()[0] ?? (await context.newPage());

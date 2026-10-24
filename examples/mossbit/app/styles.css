@@ -1,0 +1,23 @@
+@font-face { font-family: Fredoka; src: url(/fonts/fredoka.woff2) format('woff2'); font-weight: 300 700; font-display: block; }
+@font-face { font-family: Nunito; src: url(/fonts/nunito.woff2) format('woff2'); font-weight: 200 1000; font-display: block; }
+:root {
+  --moss: #4f9a52; --deep: #2f6b3f; --forest: #12291c; --leaf: #7ccf5a; --sun: #ffd166; --clay: #e07a5f;
+  --cream: #fff8ec; --sand: #f3e9d4; --ink: #1e2a22; --muted: #6b7a6c; --line: #e6dcc6; --card: #ffffff;
+  --radius: 22px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Nunito, system-ui, sans-serif; color: var(--ink); background: var(--cream); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .display { font-family: Fredoka, Nunito, sans-serif; font-weight: 600; letter-spacing: -.01em; }
+button { font: inherit; cursor: pointer; border: 0; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--deep); color: var(--cream); box-shadow: 0 3px 0 #1d4a2a; }
+.btn.leaf { background: var(--leaf); color: var(--forest); box-shadow: 0 3px 0 #58a33c; }
+.btn.ghost { background: transparent; color: var(--deep); box-shadow: inset 0 0 0 2px var(--line); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+.chip.happy { background: #e4f5da; color: var(--deep); }
+.chip.thirsty { background: #ffefc4; color: #8a5a00; }
+.chip:before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: 0 1px 0 var(--line), 0 10px 30px rgba(47, 107, 63, .07); padding: 22px; }
+.card h3 { font-size: 19px; margin-bottom: 4px; }
+.card .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 12px; flex: none; }
+.logo { display: flex; align-items: center; gap: 10px; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 24px; color: var(--deep); letter-spacing: -.02em; text-decoration: none; }

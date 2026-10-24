@@ -1,8 +1,8 @@
 title: Find the Playwright install guide
 app: https://playwright.dev
 profile: smoke
-voice: { provider: say, voice: Samantha }
-theme: { accent: "#2ead33" }
+voice: { voice: XrExE9yKIg1WjnnlVkGX }   # Matilda (ElevenLabs featured), Eleven v3
+theme: { accent: "#2ead33", background: "#1b2129", background2: "#24302b", palette: ["#e2574c"], backdrop: gradient }
 mock:
   text:
     - { find: "Playwright enables reliable", replace: "MOCKED: Playwright enables reliable" }

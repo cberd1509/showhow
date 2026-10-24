@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  Bit, Mossbit's mascot, speaking the narration (lip-synced to its words), with the wordmark.
+  data: mode (reveal | close), word (the wordmark), line (shown on its cue word), cue
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; color: var(--text); font-family: var(--font); }
+  #glow { position: absolute; width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%); }
+  #bit { position: absolute; width: 440px; height: 440px; transform-origin: 50% 100%; }
+  #bit svg { width: 440px; height: 440px; }
+  #word { position: absolute; font-family: var(--heading); font-weight: 600; font-size: 190px; letter-spacing: -.03em; line-height: 1; color: var(--text); white-space: nowrap; }
+  #word span { display: inline-block; }
+  #word span.dot { color: var(--accent); }
+  #line { position: absolute; font-family: var(--heading); font-weight: 500; font-size: 66px; line-height: 1.15; color: var(--text); }
+  /* Clay, deepened toward the text colour so the words read on cream. */
+  #line em { font-style: normal; color: color-mix(in srgb, var(--palette-2) 70%, var(--text)); }
+  .leaf { position: absolute; width: 34px; height: 18px; border-radius: 0 100% 0 100%; background: var(--accent); }
+  .leaf:nth-child(3n) { background: var(--palette-1); width: 22px; height: 22px; border-radius: 50%; }
+  .leaf:nth-child(3n+1) { background: var(--palette-2); }
+</style>
+</head>
+<body>
+<div id="glow"></div>
+<div id="bit"></div>
+<div id="word"></div>
+<div id="line"></div>
+<div id="leaves"></div>
+<script src="../app/faces.js"></script>
+<script>
+  window.showhowTimeline = async ({ data, at, gsap, kit, duration }) => {
+    const W = innerWidth, H = innerHeight, VERT = H > W, close = data.mode === 'close';
+    const M = window.Mossbit;
+    const bit = document.getElementById('bit');
+    bit.innerHTML = M.bit({ size: 440 });
+    const svg = bit.querySelector('svg');
+    const word = document.getElementById('word');
+    word.innerHTML = [...data.word].map((c) => `<span>${c}</span>`).join('') + '<span class="dot">.</span>';
+    const line = document.getElementById('line');
+    // The last two words of the line in the warm highlight.
+    const ws = data.line.split(' ');
+    line.innerHTML = ws.slice(0, -2).join(' ') + ' <em>' + ws.slice(-2).join(' ') + '</em>';
+    await kit.ready();
+
+    // Layout: Bit beside the wordmark (landscape) or above it (vertical, and the close).
+    const wb = word.getBoundingClientRect();
+    let bx, by, wx, wy;
+    if (VERT || close) {
+      bx = W / 2 - 220; by = VERT ? 330 : 70;
+      wx = W / 2 - wb.width / 2; wy = by + (VERT ? 470 : 440);
+    } else {
+      bx = W / 2 - (440 + 40 + wb.width) / 2; by = 280;
+      wx = bx + 480; wy = 380;
+    }
+    Object.assign(bit.style, { left: `${bx}px`, top: `${by}px` });
+    Object.assign(word.style, { left: `${wx}px`, top: `${wy}px` });
+    line.style.width = `${VERT ? W - 160 : close ? 1200 : Math.max(wb.width, 1000)}px`;
+    line.style.textAlign = VERT || close ? 'center' : 'left';
+    Object.assign(line.style, VERT || close ? { left: `${(W - parseFloat(line.style.width)) / 2}px`, top: `${wy + (VERT ? 230 : 205)}px` } : { left: `${wx + 8}px`, top: `${wy + 220}px` });
+    const glow = document.getElementById('glow');
+    Object.assign(glow.style, { left: `${bx + 220 - 450}px`, top: `${by + 250 - 450}px` });
+
+    const tl = gsap.timeline();
+    // Bit drops in: squash on landing, stretch, settle.
+    tl.from(glow, { scale: 0.4, opacity: 0, duration: 1.2, ease: 'expo.out' }, 0);
+    tl.fromTo(bit, { y: -700, scaleY: 1.25, scaleX: 0.85 }, { y: 0, duration: 0.55, ease: 'power2.in' }, 0.05);
+    tl.to(bit, { scaleY: 0.78, scaleX: 1.18, duration: 0.1, ease: 'power1.out' }, 0.6);
+    tl.to(bit, { scaleY: 1, scaleX: 1, duration: 0.7, ease: 'elastic.out(1.1, 0.35)' }, 0.7);
+    kit.sfx(0.6, 'thud', 0.3);
+    // Alive: a gentle bob and a sprout that sways.
+    tl.to(bit, { y: -14, duration: 1.3, yoyo: true, repeat: Math.ceil(duration / 1.3), ease: 'sine.inOut' }, 1.4);
+    tl.fromTo(svg.querySelector('.sprout'), { rotate: -6 }, { rotate: 6, duration: 0.9, yoyo: true, repeat: Math.ceil(duration / 0.9), ease: 'sine.inOut' }, 0.7);
+    // Bit says the line: mouth and blinks from the narration's words.
+    kit.lipsync(tl, ({ mouth, blink }) => { M.setMouth(svg, mouth); M.setBlink(svg, blink); });
+
+    // The wordmark lands letter by letter on its name; leaves burst from Bit.
+    const tw = Math.max(0.8, at(data.word, 0.9) - 0.05);
+    tl.from('#word span', { y: 90, opacity: 0, scale: 0.5, duration: 0.6, stagger: 0.05, ease: 'back.out(2.4)' }, tw);
+    kit.sfx(tw, 'pop', 0.25);
+    const leaves = document.getElementById('leaves');
+    for (let i = 0; i < 16; i++) {
+      const lf = document.createElement('i');
+      lf.className = 'leaf';
+      Object.assign(lf.style, { left: `${bx + 220}px`, top: `${by + 120}px` });
+      leaves.appendChild(lf);
+      const a = (i / 16) * Math.PI * 2, r = 260 + (i % 4) * 60;
+      tl.fromTo(lf, { x: 0, y: 0, rotate: 0, opacity: 1, scale: 0.4 }, { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.8 + 120, rotate: 220 + i * 30, scale: 1, opacity: 0, duration: 1.6, ease: 'power3.out' }, tw + 0.05);
+    }
+    const tline = Math.max(tw + 0.6, at(data.cue, tw + 1.2) - 0.3);
+    tl.from(line, { y: 30, opacity: 0, filter: 'blur(10px)', duration: 0.8, ease: 'expo.out' }, tline);
+    if (close) {
+      // A last happy hop as the film ends.
+      const hop = Math.max(tline + 0.8, duration - 1.4);
+      tl.to(bit, { y: -60, duration: 0.3, ease: 'power2.out' }, hop);
+      tl.to(bit, { y: 0, duration: 0.5, ease: 'bounce.out' }, hop + 0.3);
+      kit.sfx(hop, 'success', 0.25);
+    }
+    return tl;
+  };
+</script>
+</body>
+</html>
