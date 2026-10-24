@@ -183,8 +183,11 @@ export interface Spec {
    * own description (an MCP server's tool list, an OpenAPI file). For the record and the guide.
    */
   facts?: { text: string; source: string }[];
-  /** `compress: false` keeps the high-quality master as tutorial.mp4; a number sets the CRF (default 20). */
-  output?: { compress?: boolean | number };
+  /**
+   * `name`: what the video and captions are called (default: the spec's file name).
+   * `compress: false` keeps the high-quality master as the video; a number sets the CRF (default 20).
+   */
+  output?: { name?: string; compress?: boolean | number };
   /** The thumbnail: an intro-style card. Defaults to the first card, with the key moment's screenshot. */
   poster?: { kicker?: string; title?: string; highlight?: string; subtitle?: string; image?: string };
   steps: Step[];

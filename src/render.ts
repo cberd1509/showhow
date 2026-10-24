@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, s
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { loadSpec, type Spec } from './spec.ts';
-import { outputDir } from './paths.ts';
+import { outputDir, outputName } from './paths.ts';
 import { GEOMETRY } from './format.ts';
 import { CLOCK_SCRIPT } from './clock.ts';
 import { plainSay, readLines } from './voice.ts';
@@ -125,14 +125,17 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   await page.screenshot({ path: path.join(out, 'poster.jpg'), type: 'jpeg', quality: 92 });
   await browser.close();
 
-  const video = path.join(out, 'tutorial.mp4');
+  const name = outputName(file, spec.output?.name);
+  // Older renders named everything tutorial.*: don't leave those next to the new files.
+  if (name !== 'tutorial') for (const ext of ['mp4', 'srt', 'vtt']) rmSync(path.join(out, `tutorial.${ext}`), { force: true });
+  const video = path.join(out, `${name}.mp4`);
   await mixAudio(spec, tl, silent, video, out);
-  writeCaptions(tl, lines, out);
+  writeCaptions(tl, lines, out, name);
   embedChapters(tl, video);
   const setting = spec.output?.compress;
   if (opts.compress ?? setting !== false) compress(video, path.join(out, 'work', 'master.mp4'), typeof setting === 'number' ? setting : 20);
-  writeGuide(spec, tl, shots, out);
-  console.log(`render: done in ${((Date.now() - started) / 1000).toFixed(0)}s\n  ${video}\n  ${path.join(out, 'tutorial.srt')}\n  ${path.join(out, 'guide.md')}`);
+  writeGuide(spec, tl, shots, out, name);
+  console.log(`render: done in ${((Date.now() - started) / 1000).toFixed(0)}s\n  ${video}\n  ${path.join(out, `${name}.srt`)}\n  ${path.join(out, 'guide.md')}`);
 }
 
 async function mixAudio(spec: Spec, tl: Timeline, silent: string, video: string, out: string) {
@@ -285,7 +288,7 @@ function embedChapters(tl: Timeline, video: string) {
 
 const stripUndefined = <T extends object>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 
-function writeCaptions(tl: Timeline, lines: ReturnType<typeof readLines>, out: string) {
+function writeCaptions(tl: Timeline, lines: ReturnType<typeof readLines>, out: string, name: string) {
   const groups = captionsOf(tl, lines);
   const stamp = (t: number, sep: string) => {
     const ms = Math.round(t * 1000);
@@ -294,8 +297,8 @@ function writeCaptions(tl: Timeline, lines: ReturnType<typeof readLines>, out: s
     const s = Math.floor((ms % 60000) / 1000);
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}${sep}${String(ms % 1000).padStart(3, '0')}`;
   };
-  writeFileSync(path.join(out, 'tutorial.srt'), groups.map((g, i) => `${i + 1}\n${stamp(g.t0, ',')} --> ${stamp(g.t1, ',')}\n${g.text}\n`).join('\n'));
-  writeFileSync(path.join(out, 'tutorial.vtt'), `WEBVTT\n\n${groups.map((g) => `${stamp(g.t0, '.')} --> ${stamp(g.t1, '.')}\n${g.text}\n`).join('\n')}`);
+  writeFileSync(path.join(out, `${name}.srt`), groups.map((g, i) => `${i + 1}\n${stamp(g.t0, ',')} --> ${stamp(g.t1, ',')}\n${g.text}\n`).join('\n'));
+  writeFileSync(path.join(out, `${name}.vtt`), `WEBVTT\n\n${groups.map((g) => `${stamp(g.t0, '.')} --> ${stamp(g.t1, '.')}\n${g.text}\n`).join('\n')}`);
   // YouTube reads chapters from the description, under its rules; players
   // that read WebVTT chapter tracks get the full list.
   const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -306,12 +309,12 @@ function writeCaptions(tl: Timeline, lines: ReturnType<typeof readLines>, out: s
   writeFileSync(path.join(out, 'chapters.vtt'), `WEBVTT\n\n${all.map((c, i) => `${i + 1}\n${stamp(c.start, '.')} --> ${stamp(c.end, '.')}\n${c.title}\n`).join('\n')}`);
 }
 
-function writeGuide(spec: ReturnType<typeof loadSpec>['spec'], tl: Timeline, shots: Record<string, string>, out: string) {
+function writeGuide(spec: ReturnType<typeof loadSpec>['spec'], tl: Timeline, shots: Record<string, string>, out: string, name: string) {
   const md = [`# ${spec.title}`, ''];
   const intro = tl.steps[0]?.step.card;
   if (intro?.subtitle) md.push(intro.subtitle, '');
   if (tl.steps[0]?.step.guide) md.push(tl.steps[0].step.guide.trim(), '');
-  md.push('![Video](tutorial.mp4)', '');
+  md.push(`![Video](${name}.mp4)`, '');
   const grouped = tl.steps.some((p) => p.step.chapter);
   let chapter: string | undefined;
   for (const p of tl.steps.slice(1)) {

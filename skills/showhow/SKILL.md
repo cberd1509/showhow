@@ -183,7 +183,7 @@ How the merge works, so the override does what you mean: objects merge key by ke
 
 **Several videos of one app.** Put `app`, `profile`, `mock`, `theme` and `music` in a base file without steps, and have each video `extends` it: they share fixtures, look and the music track.
 
-**Compression.** `render` writes a web-sized `tutorial.mp4` (x264 CRF 20, chapters kept) and keeps the master in `work/master.mp4`. Ask once whether the person wants that; for editing in another tool they may want the master: `--no-compress`, or `output: { compress: false }` (a number sets the CRF).
+**Compression.** `render` writes a web-sized `<spec>.mp4` (named after the spec file; `output: { name }` to choose; x264 CRF 20, chapters kept) and keeps the master in `work/master.mp4`. Ask once whether the person wants that; for editing in another tool they may want the master: `--no-compress`, or `output: { compress: false }` (a number sets the CRF).
 
 Show the person the step titles and narration before spending voice credits. Voice is cached per line, so later edits only regenerate what changed.
 
@@ -221,7 +221,7 @@ A guide is structured, not flat. Between recorded steps, scenes carry what a scr
 - light: `rays` (from above), `spotlight` (two sweeping spots), `sunburst` (turning rays, for reveals), `bokeh` (drifting lights), `stars` (a night sky)
 - structure: `grid` (a floor to a glowing horizon), `blueprint` (a drafting grid), `topo` (contour lines), `cells` (Voronoi), `dots` (halftone), `stripes` (diagonal, energetic), `rings` (ripples), `scanlines` (CRT, retro)
 
-A light brand gets a light video: set `background` light and `text` dark (and `onAccent` for text on the accent), and every card, caption and built-in scene follows. Beyond the built-ins, a backdrop can be **anything that draws**:
+A light brand gets a light video: set `background` light and `text` dark, and every card, caption and built-in scene follows. Text on the accent is white when it reads, else near-black; set `onAccent` to choose. Beyond the built-ins, a backdrop can be **anything that draws**:
 - `{ shader: brand/x.frag }`: your own fragment shader (write only `void main(){ … gl_FragColor = … }`; uniforms `t`, `res`, `bg`, `bg2`, `acc`, `c1`–`c4`; `n()`, `fbm()` noise). See `examples/mossbit/brand/dappled.frag`.
 - `{ react: vendor/reactbits/Silk/Silk.jsx, props: { color: "#7B5CFF" } }`: a React component (below).
 - `{ hyperframes: vendor/hyperframes/compositions/starfield.html, vars: { density: dense } }`: a HyperFrames block (below).
@@ -285,7 +285,7 @@ Layout like a slide: one idea, large type, inside the title-safe area and above 
 
 ## 6. Make it, then look at it
 
-`showhow make <spec>`. Then pull stills from every step (`ffmpeg -ss <t> -i tutorial.mp4 -frames:v 1`) — chapters.txt has each step's start — and look at them. Check: the right thing is on screen when it is named, the camera is on the action, nothing private shows, captions don't cover the thing being clicked (if they do, change the step's `zoom`), cards are readable. Fix the spec, re-run.
+`showhow make <spec>`. Then pull stills from every step (`ffmpeg -ss <t> -i <spec>.mp4 -frames:v 1`) — chapters.txt has each step's start — and look at them. Check: the right thing is on screen when it is named, the camera is on the action, nothing private shows, captions don't cover the thing being clicked (if they do, change the step's `zoom`), cards are readable. Fix the spec, re-run.
 
 If a target is not found during `record`, the UI differs from discovery (a modal, a new deploy, a slower load): `probe --after` the previous step and adjust.
 
@@ -293,8 +293,8 @@ If a target is not found during `record`, the UI differs from discovery (a modal
 
 Everything is in `showhow-output/<spec name>/`:
 
-- `tutorial.mp4` — 1920×1080, narration, click and key sounds
-- `tutorial.srt`, `tutorial.vtt` — word-timed captions
+- `<spec>.mp4` — 1920×1080 (or 1080×1920), narration, click and key sounds; named after the spec file, or `output: { name }`
+- `<spec>.srt`, `<spec>.vtt` — word-timed captions
 - `chapters.txt` — paste into a YouTube description (YouTube's rules applied: first at 0:00, each ≥ 10 s; it reads chapters only from the description)
 - chapters embedded in the MP4 (QuickTime, VLC, IINA, most players) and `chapters.vtt` (HTML5 players, Vimeo)
 - `guide.md` + `guide/*.png` — the written version, one screenshot per step with the target ringed
