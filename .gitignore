@@ -19,5 +19,4 @@ vendor/
 *.log
 .idea/
 .vscode/
-.serena/
 .claude/settings.local.json
