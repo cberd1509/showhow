@@ -102,7 +102,7 @@ node bin/showhow.js make examples/smoke/smoke.yaml                    # voice + 
 
 ## Requirements
 
-Node 23.6+ (runs TypeScript directly), Google Chrome, ffmpeg, and an ElevenLabs key (`showhow key`) for narration and music.
+Node 23.6+ (runs TypeScript directly), Google Chrome or Microsoft Edge, ffmpeg 7+, and an ElevenLabs key (`showhow key`) for narration and music.
 
 ## Privacy
 

@@ -8,7 +8,7 @@ Thanks for helping. showhow is a CLI plus an agent skill; most changes touch one
 
 ## Setup
 
-Node 23.6+, Google Chrome and ffmpeg.
+Node 23.6+, Google Chrome (or Microsoft Edge) and ffmpeg 7+.
 
 ```sh
 npm ci

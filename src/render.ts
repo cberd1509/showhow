@@ -3,6 +3,7 @@ import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { withChannel } from './browser.ts';
 import { loadSpec, type Spec } from './spec.ts';
 import { outputDir, outputName } from './paths.ts';
 import { GEOMETRY } from './format.ts';
@@ -26,7 +27,7 @@ export async function render(file: string, opts: { compress?: boolean } = {}) {
   const total = Math.ceil(tl.duration * FPS);
   console.log(`render: ${tl.duration.toFixed(1)}s, ${total} frames`);
 
-  const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--allow-file-access-from-files'] });
+  const browser = await withChannel((channel) => chromium.launch({ channel, headless: true, args: ['--allow-file-access-from-files'] }));
   const geo = GEOMETRY[spec.format ?? 'landscape'];
   const page = await browser.newPage({ viewport: { width: geo.width, height: geo.height }, deviceScaleFactor: 1 });
   // Scenes and backdrops run on a virtual clock the render advances frame by frame.
@@ -191,11 +192,13 @@ async function mixAudio(spec: Spec, tl: Timeline, silent: string, video: string,
   const target = 'I=-16:TP=-1.5:LRA=11';
   const script = path.join(path.dirname(silent), 'mix.txt');
   writeFileSync(script, [...parts, `[premix]loudnorm=${target}:print_format=json[mix]`].join(';\n'));
-  const pass1 = spawnSync('ffmpeg', ['-y', '-hide_banner', ...inputs, '-filter_complex_script', script, '-map', '[mix]', '-t', tl.duration.toFixed(3), '-f', 'null', '-'], { encoding: 'utf8' });
+  const pass1 = spawnSync('ffmpeg', ['-y', '-hide_banner', ...inputs, '-/filter_complex', script, '-map', '[mix]', '-t', tl.duration.toFixed(3), '-f', 'null', '-'], { encoding: 'utf8' });
+  // ffmpeg 7.0 added `-/filter_complex <file>`; 8.0 removed the old `-filter_complex_script`.
+  if (pass1.status !== 0) throw new Error(`ffmpeg loudness pass failed (ffmpeg 7.0 or newer is needed): ${pass1.error?.message ?? pass1.stderr.trim().split('\n').slice(-3).join(' ')}`);
   const m = JSON.parse(pass1.stderr.slice(pass1.stderr.lastIndexOf('{'), pass1.stderr.lastIndexOf('}') + 1));
   const measured = `measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true`;
   writeFileSync(script, [...parts, `[premix]loudnorm=${target}:${measured},aresample=48000[mix]`].join(';\n'));
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...inputs, '-filter_complex_script', script, '-map', '0:v', '-map', '[mix]',
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...inputs, '-/filter_complex', script, '-map', '0:v', '-map', '[mix]',
     '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', tl.duration.toFixed(3), video]);
 }
 
