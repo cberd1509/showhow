@@ -22,7 +22,7 @@ steps:
     say: Use search to jump anywhere. Type install.
     do:
       - waitForUrl: "**/docs/intro"
-      - click: { role: button, name: "Search (Meta+k)" }
+      - click: { role: button, name: Search }
         sync: search
       - type: install
   - id: outro

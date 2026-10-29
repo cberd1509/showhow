@@ -18,6 +18,24 @@ const CHROME_ARGS = [
   '--hide-scrollbars',
 ];
 
+/**
+ * Starts the installed browser: Google Chrome, else Microsoft Edge (the same engine, preinstalled on
+ * Windows). `SHOWHOW_BROWSER` picks one (`chrome`, `msedge` or another Playwright channel) and skips the
+ * fallback.
+ */
+export async function withChannel<T>(start: (channel: string) => Promise<T>): Promise<T> {
+  const channels = process.env.SHOWHOW_BROWSER ? [process.env.SHOWHOW_BROWSER] : ['chrome', 'msedge'];
+  for (const [i, channel] of channels.entries()) {
+    try {
+      return await start(channel);
+    } catch (err) {
+      const missing = /distribution '[^']+' is not found|Executable doesn't exist/i.test(String((err as Error)?.message));
+      if (!missing || i === channels.length - 1) throw err;
+    }
+  }
+  throw new Error('unreachable');
+}
+
 export interface LaunchOptions {
   profile: string;
   headless: boolean;
@@ -30,8 +48,8 @@ export async function launch(opts: LaunchOptions): Promise<BrowserContext> {
   const dir = opts.fresh ? mkdtempSync(path.join(os.tmpdir(), 'showhow-')) : path.join(PROFILES_DIR, opts.profile);
   mkdirSync(dir, { recursive: true });
   const vp = opts.viewport;
-  const context = await chromium.launchPersistentContext(dir, {
-    channel: 'chrome',
+  const context = await withChannel((channel) => chromium.launchPersistentContext(dir, {
+    channel,
     headless: opts.headless,
     args: CHROME_ARGS,
     ignoreDefaultArgs: ['--enable-automation'],
@@ -39,7 +57,7 @@ export async function launch(opts: LaunchOptions): Promise<BrowserContext> {
     deviceScaleFactor: vp?.scale,
     colorScheme: 'light',
     locale: 'en-US',
-  });
+  }));
   // Chrome may still be flushing the profile as it closes: retry, and never fail a run over a temp dir.
   if (opts.fresh) context.on('close', () => { try { rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {} });
   // Headless Chrome announces itself in the UA; some sites refuse it.

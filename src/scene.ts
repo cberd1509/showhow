@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { withChannel } from './browser.ts';
 import { loadSpec } from './spec.ts';
 import { outputDir } from './paths.ts';
 import { GEOMETRY } from './format.ts';
@@ -34,7 +35,7 @@ export async function previewScene(file: string, id: string) {
   const src = scenePage(step.scene, dir);
   const app = Object.fromEntries(Object.entries(spec.theme?.app ?? {}).map(([k, v]) => [`app${k[0].toUpperCase()}${k.slice(1)}`, v]));
 
-  const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--allow-file-access-from-files'] });
+  const browser = await withChannel((channel) => chromium.launch({ channel, headless: true, args: ['--allow-file-access-from-files'] }));
   try {
     const geo = GEOMETRY[spec.format ?? 'landscape'];
     const page = await browser.newPage({ viewport: { width: geo.width, height: geo.height } });
